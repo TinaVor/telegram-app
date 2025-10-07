@@ -20,7 +20,7 @@ export const App = () => {
 
         // Получаем имя пользователя из initDataUnsafe
         const firstName = initDataUnsafe?.user?.first_name || 'Друг';
-        setUserName(firstName);
+        setUserName(initData);
 
         // Имитируем ответ от сервера
         setTimeout(() => {
