@@ -10,6 +10,8 @@ function App() {
       try {
         const { initData, initDataUnsafe } = retrieveLaunchParams();
 
+        console.log('initData', initData)
+
         if (!initData) {
           setStatus('error');
           return;
@@ -44,7 +46,7 @@ function App() {
   if (status === 'error') {
     return (
       <div style={styles.center}>
-        <h2>Ошибкииииииии</h2>
+        <h2>Ошибкииииииииии</h2>
         <p>Запускайте из Telegram!</p>
       </div>
     );
@@ -62,7 +64,7 @@ function App() {
   return (
     <div style={styles.center}>
       <h2>Ваши поставки</h2>
-      <p>Привет, Паща!</p> {/* ← теперь реальное имя */}
+      <p>Привет, {userName}!</p> {/* ← теперь реальное имя */}
       <p>Завтра приедет поставка №123.</p>
     </div>
   );
