@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
-import { retrieveLaunchParams } from '@twa-dev/sdk';
+import WebApp from '@twa-dev/sdk';
+import { css } from '@emotion/react';
 
-function App() {
+export const App = () => {
   const [status, setStatus] = useState('loading');
   const [userName, setUserName] = useState(''); // ← новое состояние для имени
 
   useEffect(() => {
     const init = async () => {
       try {
-        const { initData, initDataUnsafe } = retrieveLaunchParams();
+        const { initData, initDataUnsafe } = WebApp;
 
         console.log('initData', initData)
 
@@ -40,12 +41,12 @@ function App() {
   }, []);
 
   if (status === 'loading') {
-    return <div style={styles.center}><h2>Загрузка...</h2></div>;
+    return <div css={containerStyle}><h2>Загрузка...</h2></div>;
   }
 
   if (status === 'error') {
     return (
-      <div style={styles.center}>
+      <div css={containerStyle}>
         <h2>Ошибкииииииииии</h2>
         <p>Запускайте из Telegram!</p>
       </div>
@@ -54,15 +55,15 @@ function App() {
 
   if (status === 'not-subscribed') {
     return (
-      <div style={styles.center}>
+      <div css={containerStyle}>
         <h2>Оплатите подписку</h2>
-        <button style={styles.button}>Оплатить</button>
+        <button css={buttonStyle}>Оплатить</button>
       </div>
     );
   }
 
   return (
-    <div style={styles.center}>
+    <div css={containerStyle}>
       <h2>Ваши поставки</h2>
       <p>Привет, {userName}!</p> {/* ← теперь реальное имя */}
       <p>Завтра приедет поставка №123.</p>
@@ -70,26 +71,23 @@ function App() {
   );
 }
 
-const styles = {
-  center: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100vh',
-    padding: '20px',
-    textAlign: 'center',
-  },
-  button: {
-    marginTop: '20px',
-    padding: '12px 24px',
-    fontSize: '16px',
-    backgroundColor: '#0088cc',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-  },
-};
+const containerStyle = css`
+    display: flex;
+    flexDirection: column;
+    alignItems: center;
+    justifyContent: center;
+    height: 100vh;
+    padding: 20px;
+    textAlign: center;
+`
 
-export default App;
+const buttonStyle = css`
+    marginTop: 20px;
+    padding: 12px 24px;
+    fontSize: 16px;
+    backgroundColor:'#0088cc;
+    color: white;
+    border: none;
+    borderRadius: 8px;
+    cursor: pointer;
+`;
