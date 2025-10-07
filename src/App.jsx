@@ -41,7 +41,7 @@ function App() {
     return <div style={styles.center}><h2>Загрузка...</h2></div>;
   }
 
-  if (status === 'error' || status === 'auth-error') {
+  if (status === 'error') {
     return (
       <div style={styles.center}>
         <h2>Ошибкаааааааааааааа</h2>
