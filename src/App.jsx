@@ -3,20 +3,24 @@ import { retrieveLaunchParams } from '@twa-dev/sdk';
 
 function App() {
   const [status, setStatus] = useState('loading');
+  const [userName, setUserName] = useState(''); // ← новое состояние для имени
 
   useEffect(() => {
     const init = async () => {
       try {
-        const { initData } = retrieveLaunchParams();
+        const { initData, initDataUnsafe } = retrieveLaunchParams();
+
         if (!initData) {
           setStatus('error');
           return;
         }
 
-        // ПОКА ЧТО НЕ ОТПРАВЛЯЕМ НА БЭКЕНД — СДЕЛАЕМ ПРОСТО
+        // Получаем имя пользователя из initDataUnsafe
+        const firstName = initDataUnsafe?.user?.first_name || 'Друг';
+        setUserName(firstName);
+
         // Имитируем ответ от сервера
         setTimeout(() => {
-          const mockUser = { first_name: 'Алексей' };
           const hasSubscription = false; // поменяй на true, чтобы увидеть "поставки"
 
           if (hasSubscription) {
@@ -37,7 +41,7 @@ function App() {
     return <div style={styles.center}><h2>Загрузка...</h2></div>;
   }
 
-  if (status === 'error') {
+  if (status === 'error' || status === 'auth-error') {
     return (
       <div style={styles.center}>
         <h2>Ошибкаааааааааааааа</h2>
@@ -58,7 +62,7 @@ function App() {
   return (
     <div style={styles.center}>
       <h2>Ваши поставки</h2>
-      <p>Привет, Алексей!</p>
+      <p>Привет, {userName}!</p> {/* ← теперь реальное имя */}
       <p>Завтра приедет поставка №123.</p>
     </div>
   );
