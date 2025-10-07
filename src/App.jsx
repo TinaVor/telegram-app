@@ -15,6 +15,7 @@ function App() {
 
       // Получаем initData — это строка вида "query_id=...&user=...&auth_date=...&hash=..."
       const initData = webApp.initData;
+      
 
       if (!initData) {
         setStatus('auth-error');
@@ -60,7 +61,7 @@ function App() {
   if (status === 'auth-error') {
     return (
       <div style={styles.center}>
-        <h2>Ошибка запуска</h2>
+        <h2>Ошибка {{initData}} </h2>
         <p>Откройте это приложение из Telegram!!!!</p>
         <p style={{ fontSize: '12px', color: '#888', marginTop: '20px' }}>
           (Это не работает в обычном браузере)
