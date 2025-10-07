@@ -37,7 +37,7 @@ function App() {
 
       // Имитация загрузки (как у тебя)
       setTimeout(() => {
-        const hasSubscription = false; // ← поменяй на true для теста "поставок"
+        const hasSubscription = true; // ← поменяй на true для теста "поставок"
         if (hasSubscription) {
           setStatus('subscribed');
         } else {
@@ -61,7 +61,7 @@ function App() {
   if (status === 'auth-error') {
     return (
       <div style={styles.center}>
-        <h2>Ошибка {{initData}} </h2>
+        <h2>Ошибка </h2>
         <p>Откройте это приложение из Telegram!!!!</p>
         <p style={{ fontSize: '12px', color: '#888', marginTop: '20px' }}>
           (Это не работает в обычном браузере)
