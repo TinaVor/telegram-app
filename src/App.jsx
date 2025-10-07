@@ -44,7 +44,7 @@ function App() {
   if (status === 'error') {
     return (
       <div style={styles.center}>
-        <h2>Ошибкаааааааааааааа</h2>
+        <h2>Ошибкииииииии</h2>
         <p>Запускайте из Telegram!</p>
       </div>
     );
