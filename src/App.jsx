@@ -1,34 +1,89 @@
 import { useEffect, useState } from 'react';
+import { retrieveLaunchParams } from '@twa-dev/sdk';
 
-function App() { const [userName, setUserName] = useState<string | null>(null); const [error, setError] = useState(false); const [loading, setLoading] = useState(true);
+function App() {
+  const [status, setStatus] = useState('loading');
 
-useEffect(() => { // Проверяем, запущено ли приложение внутри Telegram const win = typeof window !== 'undefined' ? (window as any) : null; const webApp = win?.Telegram?.WebApp;
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const { initData } = retrieveLaunchParams();
+        if (!initData) {
+          setStatus('auth-error');
+          return;
+        }
 
- 
-if (webApp) {
-  // Говорим Telegram, что приложение готово
-  webApp.ready();
+        // ПОКА ЧТО НЕ ОТПРАВЛЯЕМ НА БЭКЕНД — СДЕЛАЕМ ПРОСТО
+        // Имитируем ответ от сервера
+        setTimeout(() => {
+          const mockUser = { first_name: 'Алексей' };
+          const hasSubscription = false; // поменяй на true, чтобы увидеть "поставки"
 
-  // Получаем данные пользователя (объект может отсутствовать)
-  const user = webApp.initDataUnsafe?.user;
-  if (user?.first_name) {
-    setUserName(user.first_name);
-  } else {
-    setError(true);
+          if (hasSubscription) {
+            setStatus('subscribed');
+          } else {
+            setStatus('not-subscribed');
+          }
+        }, 1500);
+      } catch (err) {
+        setStatus('auth-error');
+      }
+    };
+
+    init();
+  }, []);
+
+  if (status === 'loading') {
+    return <div style={styles.center}><h2>Загрузка...</h2></div>;
   }
-  setLoading(false);
-} else {
-  // Не в Telegram — можно показать сообщение или мок
-  // Здесь оставляем ошибку/помощь для локального запуска
-  setError(true);
-  setLoading(false);
+
+  if (status === 'auth-error') {
+    return (
+      <div style={styles.center}>
+        <h2>Ошибка</h2>
+        <p>Запускайте из Telegram!</p>
+      </div>
+    );
+  }
+
+  if (status === 'not-subscribed') {
+    return (
+      <div style={styles.center}>
+        <h2>Оплатите подписку</h2>
+        <button style={styles.button}>Оплатить</button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.center}>
+      <h2>Ваши поставки</h2>
+      <p>Привет, Алексей!</p>
+      <p>Завтра приедет поставка №123.</p>
+    </div>
+  );
 }
-}, []);
 
-if (loading) { return <div style={{ padding: 20, textAlign: 'center' }}>Загрузка...</div>; }
-
-if (error) { return ( <div style={{ padding: 20, textAlign: 'center' }}> <h2>❌ Ошибка</h2> <p>Запустите это приложение из Telegram или подключите тестовые данные.</p> </div> ); }
-
-return ( <div style={{ padding: 20, textAlign: 'center' }}> <h2>Привет, {userName}!</h2> <p>Вы запустили Mini App в Telegram 🎉</p> </div> ); }
+const styles = {
+  center: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh',
+    padding: '20px',
+    textAlign: 'center',
+  },
+  button: {
+    marginTop: '20px',
+    padding: '12px 24px',
+    fontSize: '16px',
+    backgroundColor: '#0088cc',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+  },
+};
 
 export default App;
