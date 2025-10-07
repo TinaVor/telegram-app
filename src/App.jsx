@@ -9,7 +9,7 @@ function App() {
       try {
         const { initData } = retrieveLaunchParams();
         if (!initData) {
-          setStatus('auth-error');
+          setStatus('error');
           return;
         }
 
@@ -37,10 +37,10 @@ function App() {
     return <div style={styles.center}><h2>Загрузка...</h2></div>;
   }
 
-  if (status === 'auth-error') {
+  if (status === 'error') {
     return (
       <div style={styles.center}>
-        <h2>Ошибка</h2>
+        <h2>Ошибкаааааааааааааа</h2>
         <p>Запускайте из Telegram!</p>
       </div>
     );
