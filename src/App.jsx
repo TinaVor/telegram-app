@@ -24,7 +24,7 @@ export const App = () => {
 
         // Имитируем ответ от сервера
         setTimeout(() => {
-          const hasSubscription = false; // поменяй на true, чтобы увидеть "поставки"
+          const hasSubscription = true; // поменяй на true, чтобы увидеть "поставки"
 
           if (hasSubscription) {
             setStatus('subscribed');
