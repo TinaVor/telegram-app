@@ -37,7 +37,7 @@ function App() {
 
       // Имитация загрузки (как у тебя)
       setTimeout(() => {
-        const hasSubscription = true; // ← поменяй на true для теста "поставок"
+        const hasSubscription = false; // ← поменяй на true для теста "поставок"
         if (hasSubscription) {
           setStatus('subscribed');
         } else {
