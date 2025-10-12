@@ -28,24 +28,36 @@ const authenticateToken = async (req, res, next) => {
       }
 
       req.user = user;
+      next();
     } else {
-      // SQLite
-      db.get(
-        'SELECT id, telegram_id, first_name, last_name, username FROM users WHERE id = ?',
-        [decoded.userId],
-        (err, user) => {
-          if (err || !user) {
-            return res.status(401).json({ message: 'Invalid token' });
+      // SQLite - используем Promise для корректного асинхронного поведения
+      const checkUser = new Promise((resolve, reject) => {
+        db.get(
+          'SELECT id, telegram_id, first_name, last_name, username FROM users WHERE id = ?',
+          [decoded.userId],
+          (err, user) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(user);
+            }
           }
+        );
+      });
 
-          req.user = user;
-          next();
+      try {
+        const user = await checkUser;
+        if (!user) {
+          return res.status(401).json({ message: 'Invalid token' });
         }
-      );
-      return; // Ждем асинхронного выполнения
-    }
 
-    next();
+        req.user = user;
+        next();
+      } catch (err) {
+        console.error('Database error in authenticateToken:', err);
+        return res.status(500).json({ message: 'Database error' });
+      }
+    }
   } catch (error) {
     return res.status(403).json({ message: 'Invalid token' });
   }

@@ -84,8 +84,8 @@ async function makeOzonRequestForAccount(ozonPersonalAccountId, clientId, apiKey
           console.log(`Проверка существования: найдено ${existingOrder.length} записей для order_id ${String(order.order_id)}`);
 
           const slot = order.timeslot?.timeslot ? JSON.stringify({
-            dateFrom: order.timeslot.timeslot.from,
-            dateTo: order.timeslot.timeslot.to
+            dateFrom: order.timeslot?.timeslot?.from,
+            dateTo: order.timeslot?.timeslot?.to
           }) : null;
           console.log(`Сформированный slot: ${slot}`);
 
