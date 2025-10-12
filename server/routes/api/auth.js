@@ -18,8 +18,8 @@ router.post('/', async (req, res) => {
       ? process.env.TELEGRAM_BOT_TOKEN
       : 'test-token-1';
 
-  const SECRET_KEY = createHmac('sha256', 'WebAppData')
-    .update(BOT_TOKEN)
+  const SECRET_KEY = createHmac('sha256', BOT_TOKEN)
+    .update('WebAppData')
     .digest();
 
   const hash = initData.hash;
