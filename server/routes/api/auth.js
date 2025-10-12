@@ -44,8 +44,9 @@ router.post('/', async (req, res) => {
   const params = { ...initData };
 
   delete params.hash;
+  delete params.signature; // signature не должен участвовать в проверке hash
 
-  console.log('server auth route: params after hash deletion =', params);
+  console.log('server auth route: params after hash and signature deletion =', params);
 
   const dataCheckString = Object.keys(params)
     .sort()
@@ -64,6 +65,11 @@ router.post('/', async (req, res) => {
     process.env.NODE_ENV === 'production'
       ? createHmac('sha256', SECRET_KEY).update(dataCheckString).digest('hex')
       : 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+
+  console.log('server auth route: PRODUCTION MODE DEBUG');
+  console.log('server auth route: SECRET_KEY (first 32 chars):', SECRET_KEY.subarray(0, 16).toString('hex'));
+  console.log('server auth route: Full dataCheckString for manual verification:', dataCheckString);
+  console.log('server auth route: Expected hash if manually calculated:', calcHash);
 
   console.log('server auth route: hash from client =', hash);
   console.log('server auth route: calculated hash =', calcHash);
