@@ -53,21 +53,18 @@ const createAccount = async (data: CreateAccountRequest, getToken: () => string 
 
 // Получение списка аккаунтов
 const getAccounts = async (getToken: () => string | null): Promise<ListAccountsResponse> => {
-  console.log('ozonPersonalAccountController: calling getAccounts');
+  // console.log('ozonPersonalAccountController: calling getAccounts');
   const authenticatedFetch = getAuthenticatedFetch(getToken);
   const res = await authenticatedFetch('/api/ozon-personal-account/list');
 
-  console.log('ozonPersonalAccountController: getAccounts response status =', res.status);
-  console.log('ozonPersonalAccountController: getAccounts response headers =', Object.fromEntries(res.headers.entries()));
-
   if (!res.ok) {
     const errorData = await res.json();
-    console.log('ozonPersonalAccountController: getAccounts error =', errorData);
+    console.log('ozonPersonalAccountController: getAccounts failed with status', res.status, '- error:', errorData);
     throw new Error(errorData.message || 'Failed to get accounts');
   }
 
   const data = await res.json();
-  console.log('ozonPersonalAccountController: getAccounts success data =', data);
+  // console.log('ozonPersonalAccountController: getAccounts success');
   return data;
 };
 

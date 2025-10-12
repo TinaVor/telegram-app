@@ -8,45 +8,32 @@ import { getInitData } from '../../../utils/get-init-data';
 
 const useCreateOrLoginUser = () => {
   const initData = getInitData();
-  console.log('authController: useCreateOrLoginUser hook called, initData =', !!initData);
-  console.log('authController: enabled =', !!initData);
+  // console.log('authController: useCreateOrLoginUser hook called, initData =', !!initData);
+  // console.log('authController: enabled =', !!initData);
 
   const query = useQuery<AuthResponse>({
     queryKey: ['auth', JSON.stringify(initData)], // Делаем queryKey уникальным для каждого initData
     queryFn: async (): Promise<AuthResponse> => {
-      console.log('🟡 authController: queryFn called - EXECUTING request!');
-      console.log('authController: useCreateOrLoginUser - preparing auth request');
-      console.log('authController: initData present =', !!initData);
-      console.log('authController: initData details =', initData);
+      // console.log('🟡 authController: queryFn called - EXECUTING request!');
 
       if (!initData) {
         throw new Error('Пользователь запускает ВНЕ Telegram');
       }
 
-      console.log('authController: making POST /api/auth request');
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(initData),
       });
 
-      console.log('authController: auth response status =', res.status);
-      console.log('authController: auth response headers =', Object.fromEntries(res.headers.entries()));
-
       if (!res.ok) {
         const errorText = await res.text();
-        console.log('authController: auth response error text =', errorText);
+        console.log('authController: auth failed with status', res.status, '- error:', errorText);
         throw new Error('Auth failed');
       }
 
       const data = await res.json();
-      console.log('authController: auth response data =', data);
-
-      // Для отладки - показать полученные данные
-      if (data.debug) {
-        console.log('authController: DEBUG MODE - Временные данные для отладки');
-      }
-
+      // console.log('authController: auth success - user authenticated');
       return data;
     },
     enabled: !!initData,
