@@ -49,7 +49,13 @@ router.post('/', async (req, res) => {
 
   const dataCheckString = Object.keys(params)
     .sort()
-    .map((key) => `${key}=${params[key]}`)
+    .map((key) => {
+      if (key === 'user') {
+        // Пользователь должен быть сериализован как JSON строка
+        return `user=${JSON.stringify(params[key])}`;
+      }
+      return `${key}=${params[key]}`;
+    })
     .join('\n');
 
   console.log('server auth route: dataCheckString =', dataCheckString);
@@ -64,16 +70,19 @@ router.post('/', async (req, res) => {
   console.log('server auth route: hashes match =', hash === calcHash);
 
   console.log('server auth route: TEL-DEBUG: stopping for hash mismatch - need to investigate dataCheckString');
-  return res.status(200).json({
-    debug: 'check logs',
-    expected: calcHash,
-    received: hash,
-    dataCheckString: dataCheckString,
-    params: params
-  });
-
-  if (hash !== calcHash)
-    return res.status(401).json({ message: 'Invalid signature' });
+  if (hash === calcHash) {
+    console.log('server auth route: HASH VALIDATION PASSED - proceeding to user auth');
+    // Закомментируем логику создания пользователя для теста
+    // return res.status(200).json({ message: 'Hash valid', token: 'test-token', user: initData.user });
+  } else {
+    console.log('server auth route: HASH MISMATCH - rejecting request');
+    return res.status(401).json({
+      error: 'Invalid signature',
+      expected: calcHash,
+      received: hash,
+      dataCheckString: dataCheckString
+    });
+  }
 
   // Работа с пользователем
   const user = initData.user;
