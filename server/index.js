@@ -2,14 +2,9 @@ const express = require('express');
 const path = require('path');
 const cron = require('node-cron');
 const https = require('https');
-const util = require('util');
 
 // Initialize database
 const { supabase, db } = require('./db');
-
-// Преобразуем db.all и db.run в промис для использования async/await
-const dbAllAsync = util.promisify(db.all).bind(db);
-const dbRunAsync = util.promisify(db.run).bind(db);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
