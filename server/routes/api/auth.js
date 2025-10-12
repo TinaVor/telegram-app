@@ -30,9 +30,14 @@ router.post('/', async (req, res) => {
 
   delete params.hash;
 
+  const dataCheckString = Object.keys(params)
+    .sort()
+    .map((key) => `${key}=${params[key]}`)
+    .join('\n');
+
   const calcHash =
     process.env.NODE_ENV === 'production'
-      ? createHmac('sha256', SECRET_KEY).digest('hex')
+      ? createHmac('sha256', SECRET_KEY).update(dataCheckString).digest('hex')
       : 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
 
   if (hash !== calcHash)

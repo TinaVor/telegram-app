@@ -5,11 +5,11 @@ import {
 } from '../../components/auth-provider';
 import { GetSuppliesResponse } from './types';
 
-const useGetUserSupplies = () => {
+const useGetUserOrders = () => {
   const { isAuthenticated } = useAuth();
 
   const query = useQuery<GetSuppliesResponse>({
-    queryKey: ['all-supplies'],
+    queryKey: ['all-order'],
     queryFn: async (): Promise<GetSuppliesResponse> => {
       if (!isAuthenticated) {
         throw new Error('Пользователь не авторизован');
@@ -32,6 +32,6 @@ const useGetUserSupplies = () => {
   return query;
 };
 
-export const supplyController = {
-  useGetUserSupplies,
+export const orderController = {
+  useGetUserOrders,
 };

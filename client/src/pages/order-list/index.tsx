@@ -1,11 +1,11 @@
 import { css } from '@emotion/react';
-import { supplyController } from '../../api';
-import { Supply } from '../../api/supply-controller/types';
+import { orderController } from '../../api';
+import { Order } from '../../api/order-controller/types';
 // @ts-ignore
 import React from 'react';
 
-export const SupplyListPage = () => {
-  const { data, isLoading, error } = supplyController.useGetUserSupplies();
+export const OrderListPage = () => {
+  const { data, isLoading, error } = orderController.useGetUserOrders();
 
   if (isLoading) return 'Загрузка...';
 
@@ -14,25 +14,25 @@ export const SupplyListPage = () => {
   return (
     <div css={containerStyles}>
       <div css={scrollableContainerStyles}>
-        {data?.map((supply) => (
-          <SupplyRow key={supply.id} {...supply} />
+        {data?.map((order) => (
+          <OrderRow key={order.id} {...order} />
         ))}
       </div>
     </div>
   );
 };
 
-export const SupplyRow = (props: Supply) => {
+export const OrderRow = (props: Order) => {
   const {
     orderId,
-    supplyNumber,
+    orderNumber,
     slot,
     clusterName,
     stockName,
     convenientSlot,
   } = props;
 
-  if (!supplyNumber) return null;
+  if (!orderNumber) return null;
 
   return (
     <div css={rowStyles}>
@@ -43,7 +43,7 @@ export const SupplyRow = (props: Supply) => {
         </div>
         <div css={flexColStyles}>
           <div css={subtitleStyles}>Номер поставки</div>
-          <div css={titleStyles}>{supplyNumber}</div>
+          <div css={titleStyles}>{orderNumber}</div>
         </div>
       </div>
 

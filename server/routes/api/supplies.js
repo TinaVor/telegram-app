@@ -1,122 +1,62 @@
 const express = require('express');
 const { authenticateToken } = require('../../middleware/auth');
+const { db } = require('../../db');
 
 const router = express.Router();
 
-// Генератор случайных строк
-function generateRandomString(length) {
-  const chars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
-// Генератор случайных чисел в диапазоне
-function getRandomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-// Генератор случайных дат в будущем
-function generateRandomFutureDate(daysOffset = 0) {
-  const now = new Date();
-  now.setDate(now.getDate() + getRandomInt(daysOffset, daysOffset + 7));
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}`;
-  return `${month}/${day}/${year}T${time}`;
-}
-
-// Списки данных для генерации
-const statuses = [
-  'Заполнение данных',
-  'Готов к отгрузке',
-  'В пути',
-  'Доставлен',
-  'Отменён',
-];
-const clusters = [
-  'Москва, Центр',
-  'Москва, Запад',
-  'Москва, Восток',
-  'Москва, Север',
-  'Москва, Юг',
-  'СПб, Центр',
-  'СПб, Север',
-  'СПб, Юг',
-];
-const stocks = [
-  'ПВЗ ООО Ромашка',
-  'ПВЗ ООО Одуванчики',
-  'ПВЗ ИП Иванова',
-  'ПВЗ ООО Лотос',
-  'ПВЗ ООО Тюльпан',
-  'ПВЗ ООО Василёк',
-  'ПВЗ ООО Фиалка',
-  'ПВЗ ООО Незабудка',
-];
-
-// Функция генерации одного supply
-function generateSupply(index) {
-  const id = generateRandomString(12);
-  const baseOrderId = getRandomInt(20000000, 30000000);
-  const orderId = `${baseOrderId}-${index + 1}`;
-  const supplyNumber = String(getRandomInt(1000, 999999));
-  const clusterIndex = getRandomInt(0, clusters.length - 1);
-  const stockIndex = getRandomInt(0, stocks.length - 1);
-  const statusIndex = getRandomInt(0, statuses.length - 1);
-  const clusterName = clusters[clusterIndex];
-  const stockName = stocks[stockIndex];
-  const status = statuses[statusIndex];
-
-  // Генерируем последовательные даты для слотов
-  const slotDateFrom = generateRandomFutureDate(1);
-  const slotDateTo = generateRandomFutureDate(2);
-
-  const convenientDateFrom1 = generateRandomFutureDate(3);
-  const convenientDateTo1 = generateRandomFutureDate(4);
-  const convenientDateFrom2 = generateRandomFutureDate(5);
-  const convenientDateTo2 = generateRandomFutureDate(6);
-
-  const isChecked = Math.random() > 0.5;
-
-  return {
-    id,
-    orderId,
-    slot: {
-      dateFrom: slotDateFrom,
-      dateTo: slotDateTo,
-    },
-    supplyNumber,
-    clusterName,
-    stockName,
-    status,
-    convenientSlot: isChecked
-      ? [
-          {
-            dateFrom: convenientDateFrom1,
-            dateTo: convenientDateTo1,
-          },
-          {
-            dateFrom: convenientDateFrom2,
-            dateTo: convenientDateTo2,
-          },
-        ]
-      : [],
-  };
-}
-
 router.get('/', authenticateToken, async (req, res) => {
-  // Генерируем случайное количество supplies от 5 до 15
-  const count = getRandomInt(5, 15);
-  const supplies = Array.from({ length: count }, (_, index) =>
-    generateSupply(index)
-  );
+  const userId = req.user.id;
 
-  res.jsonp(supplies);
+  // Запрос к БД для получения ozon_orders для текущего пользователя
+  db.all(
+    'SELECT id, slot, status, order_number, cluster_name, stock_name, convenient_slot FROM ozon_orders WHERE user_id = ?',
+    [userId],
+    (err, rows) => {
+      if (err) {
+        console.error('Error fetching ozon orders:', err);
+        return res.status(500).json({ message: 'Failed to fetch orders' });
+      }
+
+      // Преобразуем данные в нужный формат
+      const supplies = rows.map((row) => {
+        let slot = null;
+        let convenientSlot = [];
+
+        // Парсим slot как JSON, если есть
+        if (row.slot) {
+          try {
+            slot = JSON.parse(row.slot);
+          } catch (e) {
+            console.error('Error parsing slot JSON:', e);
+            slot = null;
+          }
+        }
+
+        // Парсим convenient_slot как JSON, если есть
+        if (row.convenient_slot) {
+          try {
+            convenientSlot = JSON.parse(row.convenient_slot);
+          } catch (e) {
+            console.error('Error parsing convenient_slot JSON:', e);
+            convenientSlot = [];
+          }
+        }
+
+        return {
+          id: row.id,
+          orderId: row.id, // Используем id как orderId
+          slot: slot,
+          orderNumber: row.order_number,
+          clusterName: row.cluster_name,
+          stockName: row.stock_name,
+          status: row.status,
+          convenientSlot: convenientSlot,
+        };
+      });
+
+      res.jsonp(supplies);
+    }
+  );
 });
 
 module.exports = router;

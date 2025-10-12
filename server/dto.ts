@@ -16,7 +16,7 @@ type Subscription = {
   id: SubscriptionId;
   user_id: UserId;
   status: 'active' | 'not_active' | 'rejected';
-  subscription_expired_date?: string; // Дата в формате UTC
+  expired_date?: string; // Дата в формате UTC
 };
 type SubscriptionTable = Subscription[];
 
@@ -34,17 +34,20 @@ type OzonPersonalAccountDb = OzonPersonalAccount[];
 
 ////////////////////////////////////////////////////////////
 
-type OzonSupplyId = string;
-type OzonSupplySlot = {
+type OzonOrderDb = OzonOrder[];
+type OzonOrderId = string;
+type OzonOrderSlot = {
   dateFrom: string;
   dateTo: string;
 };
-type OzonSupply = {
-  id: OzonSupplyId;
+type OzonOrder = {
+  id: OzonOrderId;
   ozon_personal_account_id: OzonPersonalAccountId;
-  slot: OzonSupplySlot;
-  supply_number: string;
+  user_id: UserId;
+  slot: OzonOrderSlot;
+  status: string;
+  order_number: string;
   cluster_name: string;
   stock_name: string;
-  convenient_slot: OzonSupplySlot[];
+  convenient_slot: OzonOrderSlot[];
 };

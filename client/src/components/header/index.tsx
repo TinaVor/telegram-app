@@ -27,7 +27,7 @@ export const Header = () => {
           title="Мои ключи от OZON кабинета"
         >
           {data?.map((i) => (
-            <article css={keyContainerStyle}>
+            <article css={keyContainerStyle} key={i.api_key}>
               <div css={keyTitleStyle}>Client_Id</div>
               <div css={keySubtitleStyle}>{i.client_id}</div>
               <div css={keyTitleStyle}>Api_Key</div>

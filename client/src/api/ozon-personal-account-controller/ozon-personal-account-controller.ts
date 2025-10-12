@@ -32,14 +32,10 @@ const useGetToken = () => {
 };
 
 // Кастомный fetch с токеном
-const getAuthenticatedFetch = (getToken: () => string | null) =>
-  createAuthenticatedFetch(getToken);
+const getAuthenticatedFetch = (getToken: () => string | null) => createAuthenticatedFetch(getToken);
 
 // Создание аккаунта
-const createAccount = async (
-  data: CreateAccountRequest,
-  getToken: () => string | null
-): Promise<CreateAccountResponse> => {
+const createAccount = async (data: CreateAccountRequest, getToken: () => string | null): Promise<CreateAccountResponse> => {
   const authenticatedFetch = getAuthenticatedFetch(getToken);
   const res = await authenticatedFetch('/api/ozon-personal-account/create', {
     method: 'POST',
@@ -56,9 +52,7 @@ const createAccount = async (
 };
 
 // Получение списка аккаунтов
-const getAccounts = async (
-  getToken: () => string | null
-): Promise<ListAccountsResponse> => {
+const getAccounts = async (getToken: () => string | null): Promise<ListAccountsResponse> => {
   const authenticatedFetch = getAuthenticatedFetch(getToken);
   const res = await authenticatedFetch('/api/ozon-personal-account/list');
 
@@ -71,10 +65,7 @@ const getAccounts = async (
 };
 
 // Удаление аккаунта
-const deleteAccount = async (
-  id: number,
-  getToken: () => string | null
-): Promise<DeleteAccountResponse> => {
+const deleteAccount = async (id: number, getToken: () => string | null): Promise<DeleteAccountResponse> => {
   const authenticatedFetch = getAuthenticatedFetch(getToken);
   const res = await authenticatedFetch(`/api/ozon-personal-account/${id}`, {
     method: 'DELETE',
@@ -114,7 +105,9 @@ const useDeleteAccount = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => deleteAccount(id, getToken),
+    mutationFn: (id: number) => {
+      return deleteAccount(id, getToken)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ozon-accounts'] });
     },

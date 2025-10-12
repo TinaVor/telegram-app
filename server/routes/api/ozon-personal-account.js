@@ -54,6 +54,7 @@ router.post('/create', async (req, res) => {
       });
     } else {
       // SQLite
+      const { randomUUID } = require('crypto');
       db.get(
         'SELECT id FROM ozon_personal_accounts WHERE client_id = ? AND api_key = ?',
         [client_id, api_key],
@@ -68,15 +69,15 @@ router.post('/create', async (req, res) => {
             });
           }
 
+          const newAccountId = randomUUID();
           db.run(
-            'INSERT INTO ozon_personal_accounts (user_id, client_id, api_key) VALUES (?, ?, ?)',
-            [userId, client_id, api_key],
+            'INSERT INTO ozon_personal_accounts (id, user_id, client_id, api_key) VALUES (?, ?, ?, ?)',
+            [newAccountId, userId, client_id, api_key],
             function (err) {
               if (err) {
                 return res.status(500).json({ message: 'Database error' });
               }
 
-              const newAccountId = this.lastID;
               const newAccount = {
                 id: newAccountId,
                 user_id: userId,

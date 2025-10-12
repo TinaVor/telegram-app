@@ -1,6 +1,6 @@
 import { css } from '@emotion/react';
 import { AuthProvider } from './components/auth-provider';
-import { SupplyListPage } from './pages/supply-list';
+import { OrderListPage } from './pages/order-list';
 import { Header } from './components/header';
 
 export const App = () => {
@@ -8,7 +8,7 @@ export const App = () => {
     <div css={mainStyles}>
       <AuthProvider>
         <Header />
-        <SupplyListPage />
+        <OrderListPage />
       </AuthProvider>
     </div>
   );

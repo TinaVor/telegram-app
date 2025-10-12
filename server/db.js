@@ -26,13 +26,83 @@ if (process.env.NODE_ENV === 'production') {
 
   // Create ozon_personal_accounts table if it doesn't exist
   db.run(`CREATE TABLE IF NOT EXISTS ozon_personal_accounts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     user_id INTEGER,
     client_id TEXT,
     api_key TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE(client_id, api_key)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
+
+  // Create ozon_orders table if it doesn't exist
+  db.run(`CREATE TABLE IF NOT EXISTS ozon_orders (
+    id TEXT PRIMARY KEY,
+    ozon_personal_account_id TEXT,
+    user_id INTEGER,
+    slot TEXT,
+    status TEXT,
+    order_number TEXT,
+    cluster_name TEXT,
+    stock_name TEXT,
+    convenient_slot TEXT,
+    FOREIGN KEY (ozon_personal_account_id) REFERENCES ozon_personal_accounts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+
+  // Create subscriptions table if it doesn't exist
+  db.run(
+    `CREATE TABLE IF NOT EXISTS subscriptions (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER,
+    status TEXT,
+    expired_date TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`,
+    (err) => {
+      if (err) {
+        console.error('Error creating subscriptions table:', err);
+        return;
+      }
+
+      // Check if subscriptions are already populated (using callback to ensure table exists)
+      db.get(`SELECT COUNT(*) as count FROM subscriptions`, (err, row) => {
+        if (err) {
+          console.error('Error checking subscriptions count:', err);
+          return;
+        }
+        if (row.count === 0) {
+          // Populate subscriptions for existing users
+          db.all(`SELECT id FROM users`, (err, rows) => {
+            if (err) {
+              console.error('Error fetching users:', err);
+              return;
+            }
+            const { randomUUID } = require('crypto');
+            rows.forEach((user) => {
+              const expired = new Date();
+              expired.setMonth(expired.getMonth() + 1);
+              const expiredStr = expired.toISOString();
+              const subscription_id = randomUUID();
+              db.run(
+                `INSERT INTO subscriptions (id, user_id, status, expired_date) VALUES (?, ?, 'active', ?)`,
+                [subscription_id, user.id, expiredStr],
+                function (err) {
+                  if (err) {
+                    console.error(
+                      'Error inserting subscription for user:',
+                      user.id,
+                      err
+                    );
+                  } else {
+                    console.log(`Inserted subscription for user: ${user.id}`);
+                  }
+                }
+              );
+            });
+          });
+        }
+      });
+    }
+  );
 }
 
 module.exports = { supabase, db };
