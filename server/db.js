@@ -23,6 +23,16 @@ if (process.env.NODE_ENV === 'production') {
     last_name TEXT,
     username TEXT
   )`);
+
+  // Create ozon_personal_accounts table if it doesn't exist
+  db.run(`CREATE TABLE IF NOT EXISTS ozon_personal_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    client_id TEXT,
+    api_key TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(client_id, api_key)
+  )`);
 }
 
 module.exports = { supabase, db };

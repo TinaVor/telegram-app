@@ -84,7 +84,7 @@ export const SupplyRow = (props: Supply) => {
           ))}
         </>
       ) : (
-        <button>Создать возможный слот</button>
+        <button>Указать возможный слот</button>
       )}
     </div>
   );

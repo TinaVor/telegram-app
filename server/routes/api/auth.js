@@ -1,6 +1,8 @@
 const express = require('express');
 const { createHmac } = require('crypto');
+const jwt = require('jsonwebtoken');
 const { supabase, db } = require('../../db');
+const { JWT_SECRET } = require('../../middleware/auth');
 
 const router = express.Router();
 
@@ -53,29 +55,55 @@ router.post('/', async (req, res) => {
         .single();
 
       if (existing) {
-        return res.json({ message: 'пользователь найден' });
+        const token = jwt.sign({ userId: existing.id }, JWT_SECRET, {
+          expiresIn: '24h',
+        });
+        return res.json({
+          message: 'пользователь найден',
+          token,
+          user: existing,
+        });
       }
 
-      await supabase.from('users').insert({
-        telegram_id: telegramId,
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        username: user.username || '',
+      const { data: newUser } = await supabase
+        .from('users')
+        .insert({
+          telegram_id: telegramId,
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          username: user.username || '',
+        })
+        .select('id, telegram_id, first_name, last_name, username')
+        .single();
+
+      const token = jwt.sign({ userId: newUser.id }, JWT_SECRET, {
+        expiresIn: '24h',
       });
 
-      res.json({ message: 'пользователь создан' });
+      res.json({
+        message: 'пользователь создан',
+        token,
+        user: newUser,
+      });
     } else {
       // Local development with SQLite
       db.get(
-        'SELECT COUNT(*) AS count FROM users WHERE telegram_id = ?',
+        'SELECT id, telegram_id, first_name, last_name, username FROM users WHERE telegram_id = ?',
         [telegramId],
-        (err, row) => {
+        (err, existingUser) => {
           if (err) {
             return res.status(500).json({ message: 'Database error' });
           }
 
-          if (row.count > 0) {
-            return res.json({ message: 'пользователь найден' });
+          if (existingUser) {
+            const token = jwt.sign({ userId: existingUser.id }, JWT_SECRET, {
+              expiresIn: '24h',
+            });
+            return res.json({
+              message: 'пользователь найден',
+              token,
+              user: existingUser,
+            });
           }
 
           db.run(
@@ -86,11 +114,29 @@ router.post('/', async (req, res) => {
               user.last_name || '',
               user.username || '',
             ],
-            (err) => {
+            function (err) {
               if (err) {
                 return res.status(500).json({ message: 'Database error' });
               }
-              res.json({ message: 'пользователь создан' });
+
+              const newUserId = this.lastID;
+              const newUser = {
+                id: newUserId,
+                telegram_id: telegramId,
+                first_name: user.first_name || '',
+                last_name: user.last_name || '',
+                username: user.username || '',
+              };
+
+              const token = jwt.sign({ userId: newUserId }, JWT_SECRET, {
+                expiresIn: '24h',
+              });
+
+              res.json({
+                message: 'пользователь создан',
+                token,
+                user: newUser,
+              });
             }
           );
         }

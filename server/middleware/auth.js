@@ -1,0 +1,57 @@
+const jwt = require('jsonwebtoken');
+const { supabase, db } = require('../db');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
+
+const authenticateToken = async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) return res.status(401).json({ message: 'Access token required' });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (process.env.NODE_ENV === 'production') {
+      if (!supabase) {
+        return res.status(500).json({ message: 'Database not configured' });
+      }
+
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('id, telegram_id, first_name, last_name, username')
+        .eq('id', decoded.userId)
+        .single();
+
+      if (error || !user) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+
+      req.user = user;
+    } else {
+      // SQLite
+      db.get(
+        'SELECT id, telegram_id, first_name, last_name, username FROM users WHERE id = ?',
+        [decoded.userId],
+        (err, user) => {
+          if (err || !user) {
+            return res.status(401).json({ message: 'Invalid token' });
+          }
+
+          req.user = user;
+          next();
+        }
+      );
+      return; // Ждем асинхронного выполнения
+    }
+
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: 'Invalid token' });
+  }
+};
+
+module.exports = {
+  authenticateToken,
+  JWT_SECRET,
+};

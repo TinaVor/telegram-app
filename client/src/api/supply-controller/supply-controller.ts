@@ -1,23 +1,24 @@
-/**
- * Логин/регистрация пользователя одним запросом
- */
-
 import { useQuery } from '@tanstack/react-query';
-import { getInitData } from '../../../utils/get-init-data';
+import {
+  createAuthenticatedFetch,
+  useAuth,
+} from '../../components/auth-provider';
 import { GetSuppliesResponse } from './types';
 
 const useGetUserSupplies = () => {
-  const initData = getInitData();
+  const { isAuthenticated } = useAuth();
+
   const query = useQuery<GetSuppliesResponse>({
     queryKey: ['all-supplies'],
     queryFn: async (): Promise<GetSuppliesResponse> => {
-      if (!initData) {
-        throw new Error('Пользователь запускает ВНЕ Telegram');
+      if (!isAuthenticated) {
+        throw new Error('Пользователь не авторизован');
       }
 
-      const res = await fetch('/api/supplies');
-
-      console.log(res);
+      const authenticatedFetch = createAuthenticatedFetch(
+        () => localStorage.getItem('auth_token') || ''
+      );
+      const res = await authenticatedFetch('/api/supplies');
 
       if (!res.ok) {
         throw new Error('Ошибка запроса');
@@ -25,7 +26,7 @@ const useGetUserSupplies = () => {
 
       return res.json();
     },
-    enabled: !!initData,
+    enabled: isAuthenticated,
   });
 
   return query;

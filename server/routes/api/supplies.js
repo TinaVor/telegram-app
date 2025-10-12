@@ -1,10 +1,12 @@
 const express = require('express');
+const { authenticateToken } = require('../../middleware/auth');
 
 const router = express.Router();
 
 // Генератор случайных строк
 function generateRandomString(length) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
   for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -29,7 +31,13 @@ function generateRandomFutureDate(daysOffset = 0) {
 }
 
 // Списки данных для генерации
-const statuses = ['Заполнение данных', 'Готов к отгрузке', 'В пути', 'Доставлен', 'Отменён'];
+const statuses = [
+  'Заполнение данных',
+  'Готов к отгрузке',
+  'В пути',
+  'Доставлен',
+  'Отменён',
+];
 const clusters = [
   'Москва, Центр',
   'Москва, Запад',
@@ -38,7 +46,7 @@ const clusters = [
   'Москва, Юг',
   'СПб, Центр',
   'СПб, Север',
-  'СПб, Юг'
+  'СПб, Юг',
 ];
 const stocks = [
   'ПВЗ ООО Ромашка',
@@ -48,7 +56,7 @@ const stocks = [
   'ПВЗ ООО Тюльпан',
   'ПВЗ ООО Василёк',
   'ПВЗ ООО Фиалка',
-  'ПВЗ ООО Незабудка'
+  'ПВЗ ООО Незабудка',
 ];
 
 // Функция генерации одного supply
@@ -75,7 +83,6 @@ function generateSupply(index) {
 
   const isChecked = Math.random() > 0.5;
 
-
   return {
     id,
     orderId,
@@ -84,27 +91,30 @@ function generateSupply(index) {
       dateTo: slotDateTo,
     },
     supplyNumber,
-    clusterNme: clusterName, // Сохраняем опечатку для совместимости
+    clusterName,
     stockName,
     status,
-    convenientSlot: isChecked ? [
-      {
-        dateFrom: convenientDateFrom1,
-        dateTo: convenientDateTo1,
-      },
-      {
-        dateFrom: convenientDateFrom2,
-        dateTo: convenientDateTo2,
-      },
-    ] : [],
+    convenientSlot: isChecked
+      ? [
+          {
+            dateFrom: convenientDateFrom1,
+            dateTo: convenientDateTo1,
+          },
+          {
+            dateFrom: convenientDateFrom2,
+            dateTo: convenientDateTo2,
+          },
+        ]
+      : [],
   };
 }
 
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   // Генерируем случайное количество supplies от 5 до 15
   const count = getRandomInt(5, 15);
-  const supplies = Array.from({ length: count }, (_, index) => generateSupply(index));
-
+  const supplies = Array.from({ length: count }, (_, index) =>
+    generateSupply(index)
+  );
 
   res.jsonp(supplies);
 });
