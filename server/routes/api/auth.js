@@ -7,10 +7,17 @@ const { JWT_SECRET } = require('../../middleware/auth');
 const router = express.Router();
 
 router.post('/', async (req, res) => {
+  console.log('server auth route: incoming request body:', req.body);
+  console.log('server auth route: headers:', req.headers);
+
   const initData = req.body;
 
-  if (!initData) return res.status(400).json({ message: 'initData required' });
+  if (!initData) {
+    console.log('server auth route: no initData');
+    return res.status(400).json({ message: 'initData required' });
+  }
 
+  console.log('server auth route: initData received:', initData);
   // Проверка подписи
 
   const BOT_TOKEN =
@@ -18,13 +25,23 @@ router.post('/', async (req, res) => {
       ? process.env.TELEGRAM_BOT_TOKEN
       : 'test-token-1';
 
+  console.log('server auth route: NODE_ENV =', process.env.NODE_ENV);
+  console.log('server auth route: BOT_TOKEN =', BOT_TOKEN);
+
   const SECRET_KEY = createHmac('sha256', BOT_TOKEN)
     .update('WebAppData')
     .digest();
 
+  console.log('server auth route: calculated SECRET_KEY');
+
   const hash = initData.hash;
 
-  if (!hash) return res.status(401).json({ message: 'Invalid' });
+  if (!hash) {
+    console.log('server auth route: no hash in initData');
+    return res.status(401).json({ message: 'Invalid' });
+  }
+
+  console.log('server auth route: hash =', hash);
 
   const params = { ...initData };
 
