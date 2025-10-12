@@ -41,21 +41,32 @@ router.post('/', async (req, res) => {
     return res.status(401).json({ message: 'Invalid' });
   }
 
-  console.log('server auth route: hash =', hash);
+  console.log('server auth route: hash from client =', hash);
+  console.log('server auth route: calculated hash =', calcHash);
+  console.log('server auth route: hashes match =', hash === calcHash);
+
+  console.log('server auth route: TEL-DEBUG: stopping for hash mismatch - need to investigate dataCheckString');
+  return res.status(200).json({ debug: 'check logs', expected: calcHash, received: hash });
 
   const params = { ...initData };
 
   delete params.hash;
+
+  console.log('server auth route: params after hash deletion =', params);
 
   const dataCheckString = Object.keys(params)
     .sort()
     .map((key) => `${key}=${params[key]}`)
     .join('\n');
 
+  console.log('server auth route: dataCheckString =', dataCheckString);
+
   const calcHash =
     process.env.NODE_ENV === 'production'
       ? createHmac('sha256', SECRET_KEY).update(dataCheckString).digest('hex')
       : 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+
+  console.log('server auth route: calcHash recalculated =', calcHash);
 
   if (hash !== calcHash)
     return res.status(401).json({ message: 'Invalid signature' });
