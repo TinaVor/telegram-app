@@ -253,8 +253,8 @@ async function makeOzonRequest() {
 }
 
 // Настраиваем cron-задачу: каждые 20 минут (*/10 * * * *)
-cron.schedule('*/20 * * * *', () => {
-  console.log('Запуск периодической задачи (каждые 5 секунд)');
+cron.schedule('*/10 * * * *', () => {
+  console.log('Запуск периодической задачи (каждые 10 минут)');
   makeOzonRequest();
 });
 
@@ -269,6 +269,7 @@ app.use('/api', require('./routes/api'));
 
 // Обслуживание React-аппа в продакшене
 if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/dist/index.html'));
   });
