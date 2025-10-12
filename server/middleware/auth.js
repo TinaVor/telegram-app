@@ -4,13 +4,25 @@ const { supabase, db } = require('../db');
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
 const authenticateToken = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  console.log('server auth middleware: incoming request headers:', req.headers);
+  console.log('server auth middleware: URL =', req.url);
+  console.log('server auth middleware: method =', req.method);
 
-  if (!token) return res.status(401).json({ message: 'Access token required' });
+  const authHeader = req.headers['authorization'];
+  console.log('server auth middleware: auth header =', authHeader);
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  console.log('server auth middleware: extracted token =', token);
+
+  if (!token) {
+    console.log('server auth middleware: no token, returning 401');
+    return res.status(401).json({ message: 'Access token required' });
+  }
 
   try {
+    console.log('server auth middleware: verifying JWT token');
     const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('server auth middleware: decoded token =', decoded);
+    console.log('server auth middleware: NODE_ENV =', process.env.NODE_ENV);
 
     if (process.env.NODE_ENV === 'production') {
       if (!supabase) {
