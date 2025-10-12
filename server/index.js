@@ -4,7 +4,7 @@ const cron = require('node-cron');
 const https = require('https');
 
 // Initialize database
-const { supabase, db } = require('./db');
+const { supabase, db, dbAllAsync, dbRunAsync } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3001;

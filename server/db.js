@@ -94,6 +94,25 @@ db.run(
   }
 );
 
+// Helper functions for async SQLite operations
+function dbAllAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+}
+
+function dbRunAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) reject(err);
+      else resolve({ id: this.lastID, changes: this.changes });
+    });
+  });
+}
+
 // Supabase - conditional initialization for production
 let supabase = null;
 if (process.env.NODE_ENV === 'production') {
@@ -108,4 +127,6 @@ if (process.env.NODE_ENV === 'production') {
 module.exports = {
   supabase,
   db,
+  dbAllAsync,
+  dbRunAsync,
 };
