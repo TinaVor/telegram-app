@@ -9,10 +9,12 @@ import { getInitData } from '../../../utils/get-init-data';
 const useCreateOrLoginUser = () => {
   const initData = getInitData();
   console.log('authController: useCreateOrLoginUser hook called, initData =', !!initData);
+  console.log('authController: enabled =', !!initData);
 
   const query = useQuery<AuthResponse>({
     queryKey: ['auth', JSON.stringify(initData)], // Делаем queryKey уникальным для каждого initData
     queryFn: async (): Promise<AuthResponse> => {
+      console.log('🟡 authController: queryFn called - EXECUTING request!');
       console.log('authController: useCreateOrLoginUser - preparing auth request');
       console.log('authController: initData present =', !!initData);
       console.log('authController: initData details =', initData);
