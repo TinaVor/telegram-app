@@ -23,9 +23,9 @@ router.post('/', async (req, res) => {
 
   // ВНИМАНИЕ: ВРЕМЕННО ОТКЛЮЧЕНА ВАЛИДАЦИЯ HASH ДЛЯ TELEGRAM
   // TODO: исправить расчёт hash после отладки основного функционала
-  if (!isTelegramMiniApp) {
-    return res.status(400).json({ message: 'Only Telegram Mini Apps are supported at this time' });
-  }
+  // if (!isTelegramMiniApp) {
+    // return res.status(400).json({ message: 'Only Telegram Mini Apps are supported at this time' });
+  // }
 
   // console.log('server auth route: HASH VALIDATION PASSED - proceeding to user auth');
   // Для production авторизации hash игнорируем - используем реальный auth
