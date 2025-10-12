@@ -41,6 +41,12 @@ const useCreateOrLoginUser = () => {
 
       const data = await res.json();
       console.log('authController: auth response data =', data);
+
+      // Для отладки - показать полученные данные
+      if (data.debug) {
+        console.log('authController: DEBUG MODE - Временные данные для отладки');
+      }
+
       return data;
     },
     enabled: !!initData,

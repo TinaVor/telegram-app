@@ -64,7 +64,13 @@ router.post('/', async (req, res) => {
   console.log('server auth route: hashes match =', hash === calcHash);
 
   console.log('server auth route: TEL-DEBUG: stopping for hash mismatch - need to investigate dataCheckString');
-  return res.status(200).json({ debug: 'check logs', expected: calcHash, received: hash });
+  return res.status(200).json({
+    debug: 'check logs',
+    expected: calcHash,
+    received: hash,
+    dataCheckString: dataCheckString,
+    params: params
+  });
 
   if (hash !== calcHash)
     return res.status(401).json({ message: 'Invalid signature' });
