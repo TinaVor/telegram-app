@@ -1,7 +1,10 @@
 {
   "name": "telegram-delivery-app-1",
   "version": "1.0.0",
-  "workspaces": ["client", "server"],
+  "workspaces": [
+    "client",
+    "server"
+  ],
   "scripts": {
     "build": "npm run build-static",
     "build-static": "cd client && npm install && npm run build",

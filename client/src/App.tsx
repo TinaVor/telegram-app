@@ -1,33 +1,19 @@
-import WebApp from '@twa-dev/sdk';
-import styled from '@emotion/styled';
-import { authController } from './api';
-import { getInitData } from '../utils/get-init-data';
+import { css } from '@emotion/react';
+import { LoginCheckProvider } from './components/login-check-provider';
+import { SupplyListPage } from './pages/supply-list';
 
 export const App = () => {
-  const initData = getInitData();
-
-  const { data, isLoading, error } = authController.useCreateOrLoginUser();
-
-  const getMessage = () => {
-    if (!initData) return 'Запускайте из Telegram!';
-    if (isLoading) return 'Загрузка...';
-    if (error) return 'Ошибка авторизации';
-    return data?.message || 'Готово';
-  };
-
   return (
-    <Container>
-      <h2>{getMessage()}</h2>
-    </Container>
+    <div css={mainStyles}>
+    <LoginCheckProvider>
+      <SupplyListPage />
+    </LoginCheckProvider></div>
+
   );
 };
 
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  padding: 20px;
-  text-align: center;
+
+const mainStyles = css`
+  max-width: 320px;
+  width: 100%;
 `;
