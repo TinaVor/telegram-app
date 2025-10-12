@@ -259,9 +259,9 @@ cron.schedule('*/10 * * * *', () => {
 });
 
 // Middleware
-app.use((req, res, next) => {
-  next();
-});
+const { requestLogger } = require('./middleware/logger');
+
+app.use(requestLogger);
 app.use(express.json());
 
 // Routes
