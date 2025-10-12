@@ -1,6 +1,7 @@
 import { css } from '@emotion/react';
 import { supplyController } from '../../api';
 import { Supply } from '../../api/supply-controller/types';
+// @ts-ignore
 import React from 'react';
 
 export const SupplyListPage = () => {
@@ -70,11 +71,12 @@ export const SupplyRow = (props: Supply) => {
         </div>
       </div>
 
-      {convenientSlot ? (
+      {convenientSlot.length > 0 ? (
         <>
-          {convenientSlot.map((s, index) => (
+          <div css={subtitleStyles}>Удобный(-ые) таймслот(-ы)</div>
+
+          {convenientSlot.map(() => (
             <div css={convenientSlotStyle}>
-              <div css={subtitleStyles}>Дата поставки</div>
               <div css={titleStyles}>
                 {slot?.dateFrom} - {slot?.dateTo}
               </div>

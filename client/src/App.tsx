@@ -12,7 +12,6 @@ export const App = () => {
   );
 };
 
-
 const mainStyles = css`
   max-width: 320px;
   width: 100%;

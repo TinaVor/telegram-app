@@ -27,12 +27,11 @@ declare global {
   }
 }
 
-// Extend React HTML elements to include the css prop
-declare module 'react' {
-  interface HTMLAttributes<T> extends React.HTMLAttributes<T> {
-    css?: import('@emotion/react').SerializedStyles;
-  }
-  interface SVGProps<T> extends React.SVGProps<T> {
-    css?: import('@emotion/react').SerializedStyles;
+// Add css prop to all HTML elements
+declare global {
+  namespace JSX {
+    interface IntrinsicAttributes {
+      css?: import('@emotion/react').SerializedStyles;
+    }
   }
 }

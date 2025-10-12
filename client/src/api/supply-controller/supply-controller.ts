@@ -20,7 +20,7 @@ const useGetUserSupplies = () => {
       console.log(res);
 
       if (!res.ok) {
-        throw new Error('Auth failed');
+        throw new Error('Ошибка запроса');
       }
 
       return res.json();
