@@ -27,6 +27,7 @@ db.run(`CREATE TABLE IF NOT EXISTS ozon_personal_accounts (
 db.run(`CREATE TABLE IF NOT EXISTS ozon_orders (
   id TEXT PRIMARY KEY,
   ozon_personal_account_id TEXT,
+  client_id TEXT NOT NULL,
   user_id INTEGER,
   slot TEXT,
   status TEXT,
@@ -34,6 +35,7 @@ db.run(`CREATE TABLE IF NOT EXISTS ozon_orders (
   cluster_name TEXT,
   stock_name TEXT,
   convenient_slot TEXT,
+  isSlotFixed INTEGER DEFAULT 0,
   FOREIGN KEY (ozon_personal_account_id) REFERENCES ozon_personal_accounts(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 )`);

@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase, db } = require('../../db');
 const { authenticateToken } = require('../../middleware/auth');
+const { makeOzonRequestForAccount } = require('../../ozon-api');
 
 const router = express.Router();
 
@@ -17,12 +18,33 @@ router.post('/create', async (req, res) => {
   }
 
   try {
+    let newAccount = null;
+
     if (process.env.NODE_ENV === 'production') {
       if (!supabase) {
         return res.status(500).json({ message: 'Database not configured' });
       }
 
-      // Проверяем уникальность client_id + api_key
+      // Проверяем, что client_id не используется другим пользователем
+      const { data: existingByClientId } = await supabase
+        .from('ozon_personal_accounts')
+        .select('id, user_id')
+        .eq('client_id', client_id)
+        .single();
+
+      if (existingByClientId) {
+        if (existingByClientId.user_id !== userId) {
+          return res.status(409).json({
+            message: 'This client_id is already used by another user',
+          });
+        } else {
+          return res.status(409).json({
+            message: 'This client_id is already linked to your account',
+          });
+        }
+      }
+
+      // Проверяем уникальность api_key (уже существующей комбинации client_id + api_key)
       const { data: existing } = await supabase
         .from('ozon_personal_accounts')
         .select('id')
@@ -36,7 +58,7 @@ router.post('/create', async (req, res) => {
         });
       }
 
-      const { data: newAccount, error } = await supabase
+      const { data: accountData, error } = await supabase
         .from('ozon_personal_accounts')
         .insert({
           user_id: userId,
@@ -47,52 +69,93 @@ router.post('/create', async (req, res) => {
         .single();
 
       if (error) throw error;
+      newAccount = accountData;
 
-      res.status(201).json({
-        message: 'Ozon personal account created successfully',
-        account: newAccount,
-      });
+      // Вызываем проверку обновлений для нового аккаунта
+      console.log(`Запуск проверки обновлений для нового аккаунта ${newAccount.id}`);
+      await makeOzonRequestForAccount(newAccount.id, client_id, api_key, userId);
     } else {
       // SQLite
       const { randomUUID } = require('crypto');
+      // Сначала проверяем, что client_id не используется другим пользователем
       db.get(
-        'SELECT id FROM ozon_personal_accounts WHERE client_id = ? AND api_key = ?',
-        [client_id, api_key],
-        (err, existing) => {
+        'SELECT id, user_id FROM ozon_personal_accounts WHERE client_id = ?',
+        [client_id],
+        (err, existingByClientId) => {
           if (err) {
             return res.status(500).json({ message: 'Database error' });
           }
 
-          if (existing) {
-            return res.status(409).json({
-              message: 'Account with this client_id and api_key already exists',
-            });
+          if (existingByClientId) {
+            if (existingByClientId.user_id !== userId) {
+              return res.status(409).json({
+                message: 'This client_id is already used by another user',
+              });
+            } else {
+              return res.status(409).json({
+                message: 'This client_id is already linked to your account',
+              });
+            }
           }
 
-          const newAccountId = randomUUID();
-          db.run(
-            'INSERT INTO ozon_personal_accounts (id, user_id, client_id, api_key) VALUES (?, ?, ?, ?)',
-            [newAccountId, userId, client_id, api_key],
-            function (err) {
+          // Проверяем уникальность комбинации client_id + api_key
+          db.get(
+            'SELECT id FROM ozon_personal_accounts WHERE client_id = ? AND api_key = ?',
+            [client_id, api_key],
+            (err, existing) => {
               if (err) {
                 return res.status(500).json({ message: 'Database error' });
               }
 
-              const newAccount = {
-                id: newAccountId,
-                user_id: userId,
-                client_id,
-                api_key,
-              };
+              if (existing) {
+                return res.status(409).json({
+                  message: 'Account with this client_id and api_key already exists',
+                });
+              }
 
-              res.status(201).json({
-                message: 'Ozon personal account created successfully',
-                account: newAccount,
-              });
+              const newAccountId = randomUUID();
+              db.run(
+                'INSERT INTO ozon_personal_accounts (id, user_id, client_id, api_key) VALUES (?, ?, ?, ?)',
+                [newAccountId, userId, client_id, api_key],
+                async function (err) {
+                  if (err) {
+                    return res.status(500).json({ message: 'Database error' });
+                  }
+
+                  newAccount = {
+                    id: newAccountId,
+                    user_id: userId,
+                    client_id,
+                    api_key,
+                  };
+
+                  // Вызываем проверку обновлений для нового аккаунта
+                  console.log(`Запуск проверки обновлений для нового аккаунта ${newAccountId}`);
+                  try {
+                    await makeOzonRequestForAccount(newAccountId, client_id, api_key, userId);
+                  } catch (apiError) {
+                    console.error('Ошибка при проверке обновлений нового аккаунта:', apiError);
+                    // Не возвращаем ошибку, так как аккаунт уже создан
+                  }
+
+                  res.status(201).json({
+                    message: 'Ozon personal account created successfully',
+                    account: newAccount,
+                  });
+                }
+              );
             }
           );
         }
       );
+    }
+
+    // Для Supabase отправляем ответ после вызова проверки
+    if (process.env.NODE_ENV === 'production' && newAccount) {
+      res.status(201).json({
+        message: 'Ozon personal account created successfully',
+        account: newAccount,
+      });
     }
   } catch (error) {
     res.status(500).json({ message: 'Internal server error' });
@@ -161,6 +224,17 @@ router.delete('/:id', async (req, res) => {
           .json({ message: 'Account not found or access denied' });
       }
 
+      // Удаляем все заказы, связанные с этим аккаунтом
+      const { error: ordersError } = await supabase
+        .from('ozon_orders')
+        .delete()
+        .eq('ozon_personal_account_id', id);
+
+      if (ordersError) {
+        console.error('Error deleting orders:', ordersError);
+        // Продолжаем удаление аккаунта даже если не удалось удалить заказы
+      }
+
       const { error } = await supabase
         .from('ozon_personal_accounts')
         .delete()
@@ -171,23 +245,45 @@ router.delete('/:id', async (req, res) => {
       res.json({ message: 'Ozon personal account deleted successfully' });
     } else {
       // SQLite
-      db.run(
-        'DELETE FROM ozon_personal_accounts WHERE id = ? AND user_id = ?',
-        [id, userId],
-        function (err) {
-          if (err) {
-            return res.status(500).json({ message: 'Database error' });
-          }
+      // Используем транзакцию для удаления аккаунта и связанных заказов
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
 
-          if (this.changes === 0) {
-            return res
-              .status(404)
-              .json({ message: 'Account not found or access denied' });
-          }
+        // Удаляем все заказы, связанные с этим аккаунтом
+        db.run(
+          'DELETE FROM ozon_orders WHERE ozon_personal_account_id = ?',
+          [id],
+          function (err) {
+            if (err) {
+              console.error('Error deleting orders:', err);
+              db.run('ROLLBACK');
+              return res.status(500).json({ message: 'Database error deleting orders' });
+            }
 
-          res.json({ message: 'Ozon personal account deleted successfully' });
-        }
-      );
+            // Теперь удаляем сам аккаунт
+            db.run(
+              'DELETE FROM ozon_personal_accounts WHERE id = ? AND user_id = ?',
+              [id, userId],
+              function (err) {
+                if (err) {
+                  db.run('ROLLBACK');
+                  return res.status(500).json({ message: 'Database error' });
+                }
+
+                if (this.changes === 0) {
+                  db.run('ROLLBACK');
+                  return res
+                    .status(404)
+                    .json({ message: 'Account not found or access denied' });
+                }
+
+                db.run('COMMIT');
+                res.json({ message: 'Ozon personal account deleted successfully' });
+              }
+            );
+          }
+        );
+      });
     }
   } catch (error) {
     res.status(500).json({ message: 'Internal server error' });

@@ -35,31 +35,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   } = authController.useCreateOrLoginUser();
 
   useEffect(() => {
-    // console.log('AuthProvider: useEffect triggered');
-    // console.log('AuthProvider: initData =', initData);
-
     if (!initData) {
-      // console.log('AuthProvider: no initData, setting error');
       setIsLoading(false);
       setError('Запускайте из Telegram!');
       return;
     }
 
     if (queryLoading) {
-      // console.log('AuthProvider: query loading');
       setIsLoading(true);
       return;
     }
 
     if (queryError) {
-      console.log('AuthProvider: auth error =', queryError);
       setIsLoading(false);
       setError('Ошибка авторизации');
       return;
     }
 
     if (data && data.token && data.user) {
-      // console.log('AuthProvider: setting token and user');
       setToken(data.token);
       setUser(data.user);
       localStorage.setItem('auth_token', data.token);

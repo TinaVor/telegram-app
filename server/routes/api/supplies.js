@@ -9,7 +9,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
   // Запрос к БД для получения ozon_orders для текущего пользователя
   db.all(
-    'SELECT id, slot, status, order_number, cluster_name, stock_name, convenient_slot FROM ozon_orders WHERE user_id = ?',
+    'SELECT id, slot, status, order_number, cluster_name, stock_name, convenient_slot, client_id, isSlotFixed FROM ozon_orders WHERE user_id = ?',
     [userId],
     (err, rows) => {
       if (err) {
@@ -51,6 +51,7 @@ router.get('/', authenticateToken, async (req, res) => {
           stockName: row.stock_name,
           status: row.status,
           convenientSlot: convenientSlot,
+          isSlotFixed: row.isSlotFixed === 1,
         };
       });
 

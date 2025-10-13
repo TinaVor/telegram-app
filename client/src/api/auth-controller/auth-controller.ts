@@ -8,14 +8,10 @@ import { getInitData } from '../../../utils/get-init-data';
 
 const useCreateOrLoginUser = () => {
   const initData = getInitData();
-  // console.log('authController: useCreateOrLoginUser hook called, initData =', !!initData);
-  // console.log('authController: enabled =', !!initData);
 
   const query = useQuery<AuthResponse>({
     queryKey: ['auth', JSON.stringify(initData)], // Делаем queryKey уникальным для каждого initData
     queryFn: async (): Promise<AuthResponse> => {
-      // console.log('🟡 authController: queryFn called - EXECUTING request!');
-
       if (!initData) {
         throw new Error('Пользователь запускает ВНЕ Telegram');
       }
@@ -27,13 +23,10 @@ const useCreateOrLoginUser = () => {
       });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        console.log('authController: auth failed with status', res.status, '- error:', errorText);
         throw new Error('Auth failed');
       }
 
       const data = await res.json();
-      // console.log('authController: auth success - user authenticated');
       return data;
     },
     enabled: !!initData,

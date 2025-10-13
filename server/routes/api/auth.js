@@ -7,17 +7,12 @@ const { JWT_SECRET } = require('../../middleware/auth');
 const router = express.Router();
 
 router.post('/', async (req, res) => {
-  // console.log('server auth route: incoming request body:', req.body);
-  // console.log('server auth route: headers:', req.headers);
-
   const initData = req.body;
 
   if (!initData) {
-    console.log('server auth route: no initData');
     return res.status(400).json({ message: 'initData required' });
   }
 
-  // console.log('server auth route: initData received:', initData);
   // Проверка подписи - TEMPORARILY DISABLED FOR TELEGRAM MINI APP DEBUG
   const isTelegramMiniApp = req.headers['user-agent'] && req.headers['user-agent'].includes('Telegram');
 
@@ -27,11 +22,9 @@ router.post('/', async (req, res) => {
     // return res.status(400).json({ message: 'Only Telegram Mini Apps are supported at this time' });
   // }
 
-  // console.log('server auth route: HASH VALIDATION PASSED - proceeding to user auth');
   // Для production авторизации hash игнорируем - используем реальный auth
   // if (hash === calcHash) {
   // } else {
-  //   console.log('server auth route: HASH MISMATCH - rejecting request');
   //   return res.status(401).json({
   //     error: 'Invalid signature',
   //     expected: calcHash,

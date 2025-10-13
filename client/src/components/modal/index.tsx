@@ -39,6 +39,7 @@ const modalStyle = css`
   width: calc(100% - 40px);
   height: calc(100% - 40px);
   padding: 12px;
+  color: black;
   top: 20px;
   left: 20px;
 `;

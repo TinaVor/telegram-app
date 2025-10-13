@@ -43,6 +43,7 @@ type OzonOrderSlot = {
 type OzonOrder = {
   id: OzonOrderId;
   ozon_personal_account_id: OzonPersonalAccountId;
+  client_id: string;
   user_id: UserId;
   slot: OzonOrderSlot;
   status: string;
@@ -50,4 +51,5 @@ type OzonOrder = {
   cluster_name: string;
   stock_name: string;
   convenient_slot: OzonOrderSlot[];
+  isSlotFixed: boolean;
 };

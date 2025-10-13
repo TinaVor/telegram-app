@@ -11,7 +11,14 @@ export type Order = {
   clusterName: string;
   stockName: string;
   convenientSlot: OrderSlot[];
+  isSlotFixed?: boolean;
 };
 
 export type GetSuppliesResponse = Order[];
 export type GetSuppliesRequest = {};
+
+export type BookSlotRequest = {
+  orderId: string;
+  slots: OrderSlot[];
+};
+export type BookSlotResponse = {};

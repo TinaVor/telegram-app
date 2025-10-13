@@ -9,144 +9,8 @@ const { supabase, db, dbAllAsync, dbRunAsync } = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Функция для выполнения запроса к Ozon API для одного аккаунта
-async function makeOzonRequestForAccount(ozonPersonalAccountId, clientId, apiKey, userId) {
-  try {
-    console.log(`Выполняем запрос к Ozon API для Client-Id: ${clientId}`);
-
-    const response = await fetch(
-      'https://api-seller.ozon.ru/v3/supply-order/list',
-      {
-        method: 'POST',
-        headers: {
-          'Client-Id': clientId,
-          'Api-Key': apiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          filter: {
-            states: ['DATA_FILLING', 'READY_TO_SUPPLY'],
-          },
-          limit: 100,
-          sort_by: 'ORDER_CREATION',
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    const ids = data?.order_ids ?? [];
-
-    console.log(`Для Client-Id ${clientId}, ids:`, ids);
-
-    if (ids.length) {
-      const chunkSize = 50;
-      const idChunks = [];
-      for (let i = 0; i < ids.length; i += chunkSize) {
-        idChunks.push(ids.slice(i, i + chunkSize));
-      }
-
-      let allResults = { orders: [] };
-
-      for (const chunk of idChunks) {
-        const response2 = await fetch(
-          'https://api-seller.ozon.ru/v3/supply-order/get',
-          {
-            method: 'POST',
-            headers: {
-              'Client-Id': clientId,
-              'Api-Key': apiKey,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              order_ids: chunk,
-            }),
-          }
-        );
-        const data2 = await response2.json();
-        console.log(
-          `Результат чанка для Client-Id ${clientId} (размер чанка: ${chunk.length}):`,
-          JSON.stringify(data2)
-        );
-
-        // Объединяем результаты из разных чанков
-        if (data2.orders) {
-          allResults.orders.push(...data2.orders);
-        }
-      }
-
-      // Запись поставок в БД
-      for (const order of allResults.orders) {
-        const orderNumber = order.order_number;
-        console.log(`Обрабатываем поставку: ${orderNumber}, order_id: ${order.order_id}`);
-        try {
-          const existingOrder = await dbAllAsync('SELECT * FROM ozon_orders WHERE id = ?', [String(order.order_id)]);
-          console.log(`Проверка существования: найдено ${existingOrder.length} записей для order_id ${String(order.order_id)}`);
-
-          const slot = order.timeslot?.timeslot ? JSON.stringify({
-            dateFrom: order.timeslot?.timeslot?.from,
-            dateTo: order.timeslot?.timeslot?.to
-          }) : null;
-          console.log(`Сформированный slot: ${slot}`);
-
-          if (existingOrder.length === 0) {
-            // Новая поставка - вставляем
-            console.log(`Подготавливаемся вставить новую поставку: ${order.order_number}, userId: ${userId}, ozonPersonalAccountId: ${ozonPersonalAccountId}`);
-            console.log(`Параметры вставки: [${String(order.order_id)}, ${ozonPersonalAccountId}, ${userId}, ${slot}, ${order.state}, ${order.order_number}, null, ${order.drop_off_warehouse?.name || null}, []]`);
-
-            const insertResult = await dbRunAsync(
-              `INSERT INTO ozon_orders (id, ozon_personal_account_id, user_id, slot, status, order_number, cluster_name, stock_name, convenient_slot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              [
-                String(order.order_id),
-                ozonPersonalAccountId,
-                userId,
-                slot,
-                order.state,
-                order.order_number,
-                null, // cluster_name
-                order.drop_off_warehouse?.name || null, // stock_name
-                JSON.stringify([]) // convenient_slot
-              ]
-            );
-
-            console.log(`Результат вставки:`, insertResult);
-            console.log(`Вставлена новая поставка: ${order.order_number}`);
-          } else {
-            console.log(`Поставка ${order.order_number} уже существует, проверяем slot`);
-            // Проверяем, изменился ли timeslot
-            const existingSlot = existingOrder[0].slot;
-            console.log(`Существующий slot: "${existingSlot}" vs новый: "${slot}"`);
-            if (existingSlot !== slot) {
-              // Обновляем только slot и status если изменился slot
-              const updateResult = await dbRunAsync(
-                `UPDATE ozon_orders SET slot = ?, status = ? WHERE id = ?`,
-                [slot, order.state, String(order.order_id)]
-              );
-              console.log(`Результат обновления slot:`, updateResult);
-              console.log(`Обновлен slot для поставки: ${order.order_number}`);
-            } else {
-              console.log(`Slot не изменился для поставки: ${order.order_number}, пропускаем обновление`);
-            }
-          }
-        } catch (error) {
-          console.error(`Ошибка обработки поставки ${orderNumber}:`, error.message);
-          console.error(`Полная ошибка:`, error);
-        }
-      }
-
-      console.log(
-        `Для Client-Id ${clientId} обработано ${allResults.orders.length} поставок`
-      );
-    } else {
-      console.log(`Для Client-Id ${clientId} нет поставок для обработки.`);
-    }
-  } catch (error) {
-    console.error(
-      `Ошибка при выполнении запроса к Ozon API для Client-Id ${clientId}:`,
-      error.message
-    );
-  }
-}
+// Импорт функций проверки обновлений
+const { makeOzonRequestForAccount, checkSlotsForFixing } = require('./ozon-api');
 
 // Основная функция для выполнения запроса ко всем активным пользователям
 async function makeOzonRequest() {
@@ -252,10 +116,13 @@ async function makeOzonRequest() {
   }
 }
 
-// Настраиваем cron-задачу: каждые 20 минут (*/10 * * * *)
 cron.schedule('*/10 * * * *', () => {
-  console.log('Запуск периодической задачи (каждые 10 минут)');
+  console.warn('Проверка заказов пользователя (каждые 10 минут)');
   makeOzonRequest();
+});
+cron.schedule('*/1 * * * *', () => {
+  console.warn('Проверка слотов каждую 1 минуту');
+  checkSlotsForFixing(); // Добавляем проверку слотов
 });
 
 // Middleware

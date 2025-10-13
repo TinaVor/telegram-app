@@ -27,11 +27,9 @@ const requestLogger = (req, res, next) => {
   const timestamp = formatDateTime(new Date());
 
   // Логируем начало запроса
-  console.log(`[${timestamp}] ${req.method} ${req.originalUrl} - Начало обработки запроса`);
 
   // Логируем заголовки (включая авторизацию)
   const headers = { ...req.headers };
-  console.log(`[${timestamp}] Заголовки запроса: ${JSON.stringify(headers, null, 2)}`);
 
   // Логируем тело запроса (исключая слишком большие payloads)
   let bodyLog = '';
@@ -43,19 +41,8 @@ const requestLogger = (req, res, next) => {
       bodyLog = `[Большой payload - размер: ${bodySize} символов]`;
     }
   }
-  if (bodyLog) {
-    console.log(`[${timestamp}] Тело запроса: ${bodyLog}`);
-  }
 
-  // Логируем параметры запроса
-  if (req.params && Object.keys(req.params).length > 0) {
-    console.log(`[${timestamp}] Параметры пути: ${JSON.stringify(req.params, null, 2)}`);
-  }
 
-  // Логируем query параметры
-  if (req.query && Object.keys(req.query).length > 0) {
-    console.log(`[${timestamp}] Query параметры: ${JSON.stringify(req.query, null, 2)}`);
-  }
 
   // Перехватываем окончание ответа для логирования
   const originalSend = res.send;
@@ -71,18 +58,6 @@ const requestLogger = (req, res, next) => {
     const statusCode = res.statusCode;
     const endTimestamp = formatDateTime(new Date());
 
-    // Логируем результат
-    console.log(`[${endTimestamp}] ${req.method} ${req.originalUrl} - Завершено за ${duration}мс со статусом ${statusCode}`);
-
-    // Логируем тело ответа (если не слишком большое)
-    if (responseBody && responseBody.length < 5000) {
-      try {
-        const parsedBody = JSON.parse(responseBody);
-        console.log(`[${endTimestamp}] Тело ответа: ${JSON.stringify(parsedBody, null, 2)}`);
-      } catch (e) {
-        console.log(`[${endTimestamp}] Тело ответа (не JSON): ${responseBody.substring(0, 200)}...`);
-      }
-    }
 
     // Записываем в файл для анализа
     const logEntry = `${endTimestamp} | ${req.method} ${req.originalUrl} | ${statusCode} | ${duration}ms | IP: ${req.ip} | User-Agent: ${req.get('User-Agent') || 'Unknown'}`;
