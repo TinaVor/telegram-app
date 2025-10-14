@@ -1,7 +1,6 @@
 import { css } from '@emotion/react';
 import { orderController } from '../../api';
 import { Order } from '../../api/order-controller/types';
-// @ts-ignore
 import React, { useState } from 'react';
 import { Modal } from '../../components/modal';
 import DatePicker from 'react-datepicker';
@@ -231,31 +230,33 @@ const SlotModal = ({ orderId, convenientSlot, isOpen, onClose }: { orderId: stri
           <div key={index} css={slotRowStyle}>
             <div css={pickerContainerStyle}>
               <label>От:</label>
-              <DatePicker
-                selected={slot.dateFrom}
-                onChange={(date) => updateSlot(index, 'dateFrom', date)}
-                minDate={new Date()}
-                showTimeSelect
-                timeFormat="HH:mm"
-                timeIntervals={60}
-                dateFormat="dd/MM/yyyy HH:mm"
-                css={datePickerComponentStyle}
-                placeholderText="Выберите дату и время"
-              />
+              <div css={datePickerComponentStyle}>
+                <DatePicker
+                  selected={slot.dateFrom}
+                  onChange={(date) => updateSlot(index, 'dateFrom', date)}
+                  minDate={new Date()}
+                  showTimeSelect
+                  timeFormat="HH:mm"
+                  timeIntervals={60}
+                  dateFormat="dd/MM/yyyy HH:mm"
+                  placeholderText="Выберите дату и время"
+                />
+              </div>
             </div>
             <div css={pickerContainerStyle}>
               <label>До:</label>
-              <DatePicker
-                selected={slot.dateTo}
-                onChange={(date) => updateSlot(index, 'dateTo', date)}
-                minDate={slot.dateFrom || new Date()}
-                showTimeSelect
-                timeFormat="HH:mm"
-                timeIntervals={60}
-                dateFormat="dd/MM/yyyy HH:mm"
-                css={datePickerComponentStyle}
-                placeholderText="Выберите дату и время"
-              />
+              <div css={datePickerComponentStyle}>
+                <DatePicker
+                  selected={slot.dateTo}
+                  onChange={(date) => updateSlot(index, 'dateTo', date)}
+                  minDate={slot.dateFrom || new Date()}
+                  showTimeSelect
+                  timeFormat="HH:mm"
+                  timeIntervals={60}
+                  dateFormat="dd/MM/yyyy HH:mm"
+                  placeholderText="Выберите дату и время"
+                />
+              </div>
             </div>
             <button onClick={() => removeSlot(index)}>Удалить</button>
           </div>
@@ -337,9 +338,6 @@ const slotRowStyle = css`
   gap: 10px;
 `;
 
-const datePickerStyle = css`
-  flex: 1;
-`;
 
 const buttonContainerStyle = css`
   display: flex;
