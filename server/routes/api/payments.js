@@ -51,28 +51,42 @@ router.post('/create', authenticateToken, async (req, res) => {
 
     // Создаем платеж в ЮКассе через API
     const yookassaClient = createYookassaClient();
+    
+    // Формируем return_url в зависимости от окружения
+    let returnUrl;
+    if (process.env.NODE_ENV === 'production') {
+      returnUrl = `${process.env.YOOKASSA_WEBHOOK_URL || 'https://your-app.onrender.com'}/payment-success`;
+    } else {
+      returnUrl = `${process.env.YOOKASSA_WEBHOOK_URL || 'http://localhost:3001'}/payment-success`;
+    }
+
     const paymentData = {
       amount: {
         value: (paymentAmount / 100).toFixed(2),
         currency: 'RUB'
       },
-      payment_method_data: {
-        type: 'bank_card'
-      },
       confirmation: {
         type: 'redirect',
-        return_url: `${process.env.YOOKASSA_WEBHOOK_URL || 'http://localhost:3001'}/payment-success`
+        return_url: returnUrl
       },
-      description: plan_type === 'basic' ? '30 слотов' : '90 слотов',
+      description: plan_type === 'basic' ? 'Подписка на 30 слотов' : 'Подписка на 90 слотов',
       metadata: {
         payment_id: paymentId,
         user_id: userId,
         plan_type: plan_type
-      }
+      },
+      capture: true
     };
+
+    console.log('Creating payment with data:', JSON.stringify(paymentData, null, 2));
+    console.log('YOOKASSA_SHOP_ID exists:', !!process.env.YOOKASSA_SHOP_ID);
+    console.log('YOOKASSA_SECRET_KEY exists:', !!process.env.YOOKASSA_SECRET_KEY);
+    console.log('YOOKASSA_WEBHOOK_URL:', process.env.YOOKASSA_WEBHOOK_URL);
 
     const response = await yookassaClient.post('/payments', paymentData);
     const payment = response.data;
+    
+    console.log('YooKassa API response:', JSON.stringify(payment, null, 2));
 
     // Обновляем ID платежа в базе на ID из ЮКассы
     await dbRunAsync(
@@ -91,8 +105,37 @@ router.post('/create', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error creating payment:', error);
-    res.status(500).json({ message: 'Ошибка при создании платежа' });
+    console.error('Error creating payment:');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error('Error response status:', error.response.status);
+      console.error('Error response data:', JSON.stringify(error.response.data, null, 2));
+      console.error('Error response headers:', error.response.headers);
+      
+      // Return more specific error message based on YooKassa response
+      if (error.response.status === 401) {
+        return res.status(500).json({ message: 'Ошибка аутентификации с ЮКассой. Проверьте SHOP_ID и SECRET_KEY' });
+      } else if (error.response.status === 402) {
+        return res.status(500).json({ message: 'Ошибка оплаты. Проверьте данные платежа' });
+      } else if (error.response.status === 400) {
+        return res.status(500).json({ message: 'Неверный запрос к ЮКассе: ' + (error.response.data.description || 'проверьте данные') });
+      }
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('Error request:', error.request);
+      return res.status(500).json({ message: 'Нет ответа от сервера ЮКассы. Проверьте подключение к интернету' });
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Error config:', error.config);
+    }
+    
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ message: 'Ошибка при создании платежа: ' + error.message });
   }
 });
 
