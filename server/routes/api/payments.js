@@ -80,8 +80,21 @@ router.post('/create', authenticateToken, async (req, res) => {
 
     console.log('Creating payment with data:', JSON.stringify(paymentData, null, 2));
     console.log('YOOKASSA_SHOP_ID exists:', !!process.env.YOOKASSA_SHOP_ID);
+    console.log('YOOKASSA_SHOP_ID length:', process.env.YOOKASSA_SHOP_ID ? process.env.YOOKASSA_SHOP_ID.length : 0);
+    console.log('YOOKASSA_SHOP_ID first 4 chars:', process.env.YOOKASSA_SHOP_ID ? process.env.YOOKASSA_SHOP_ID.substring(0, 4) + '...' : 'none');
     console.log('YOOKASSA_SECRET_KEY exists:', !!process.env.YOOKASSA_SECRET_KEY);
+    console.log('YOOKASSA_SECRET_KEY length:', process.env.YOOKASSA_SECRET_KEY ? process.env.YOOKASSA_SECRET_KEY.length : 0);
+    console.log('YOOKASSA_SECRET_KEY first 4 chars:', process.env.YOOKASSA_SECRET_KEY ? process.env.YOOKASSA_SECRET_KEY.substring(0, 4) + '...' : 'none');
     console.log('YOOKASSA_WEBHOOK_URL:', process.env.YOOKASSA_WEBHOOK_URL);
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    
+    // Проверяем формат переменных окружения
+    if (process.env.YOOKASSA_SHOP_ID && !/^\d+$/.test(process.env.YOOKASSA_SHOP_ID)) {
+      console.error('YOOKASSA_SHOP_ID должен содержать только цифры');
+    }
+    if (process.env.YOOKASSA_SECRET_KEY && process.env.YOOKASSA_SECRET_KEY.length < 20) {
+      console.error('YOOKASSA_SECRET_KEY слишком короткий');
+    }
 
     const response = await yookassaClient.post('/payments', paymentData);
     const payment = response.data;
