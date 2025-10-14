@@ -164,6 +164,7 @@ router.get('/:paymentId/status', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error getting payment status:',  res.json);
     console.error('Error getting payment status:', error);
     res.status(500).json({ message: 'Ошибка при получении статуса платежа' });
   }
