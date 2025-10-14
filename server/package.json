@@ -9,6 +9,7 @@
     "http-proxy-middleware": "^2.0.6",
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^4.2.1",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "yookassa": "^0.1.1"
   }
 }
