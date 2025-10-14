@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ozonPersonalAccountController, subscriptionController } from '../../api';
+import { ozonPersonalAccountController, subscriptionController, paymentController } from '../../api';
 import { Modal } from '../modal';
 import { css } from '@emotion/react';
 
@@ -17,35 +17,71 @@ export const Header = () => {
   const [clientId, setClientId] = useState('');
   const [apiKey, setApiKey] = useState('');
 
-  // Подписка
+  // Подписка и платежи
   const { mutate: createSubscription, isPending: isCreatingSubscription } = subscriptionController.useCreateSubscription();
   const { data: subscriptionStatus } = subscriptionController.useGetSubscriptionStatus();
+  const { mutate: createPayment, isPending: isCreatingPayment } = paymentController.useCreatePayment();
+  
+  // Состояние для модального окна оплаты
+  const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [currentPayment, setCurrentPayment] = useState<{ id: string; confirmation_url: string; amount: { value: string; currency: string }; description: string } | null>(null);
 
   const handleSubscribe = (planType: 'basic' | 'premium') => {
-    createSubscription(
+    createPayment(
       { plan_type: planType },
       {
         onSuccess: (data) => {
-          alert('Подписка успешно активирована!');
-          console.log('Subscription created:', data);
-          setSubscriptionModalOpen(false);
+          console.log('Payment created:', data);
+          setCurrentPayment({
+            id: data.payment.id,
+            confirmation_url: data.payment.confirmation.confirmation_url,
+            amount: data.payment.amount,
+            description: data.payment.description
+          });
+          setPaymentModalOpen(true);
         },
         onError: (error) => {
-          alert('Ошибка при активации подписки. Пожалуйста, попробуйте еще раз.');
+          alert('Ошибка при создании платежа. Пожалуйста, попробуйте еще раз.');
+          console.error('Payment creation error:', error);
+        }
+      }
+    );
+  };
+
+  const handlePaymentConfirm = () => {
+    if (!currentPayment) return;
+    
+    // В реальном приложении здесь был бы вызов API для подтверждения платежа
+    // Для демонстрации имитируем успешную оплату и создаем подписку
+    createSubscription(
+      { plan_type: currentPayment.description.includes('1 месяц') ? 'basic' : 'premium' },
+      {
+        onSuccess: (data) => {
+          alert('Платеж успешно обработан! Подписка активирована.');
+          console.log('Subscription created:', data);
+          setPaymentModalOpen(false);
+          setSubscriptionModalOpen(false);
+          setCurrentPayment(null);
+        },
+        onError: (error) => {
+          alert('Ошибка при активации подписки. Пожалуйста, обратитесь в поддержку.');
           console.error('Subscription creation error:', error);
         }
       }
     );
   };
 
-  // Форматирование даты для отображения
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+  const handlePaymentCancel = () => {
+    setPaymentModalOpen(false);
+    setCurrentPayment(null);
+  };
+
+  // Форматирование количества проверок для отображения
+  const formatChecks = (checks: number) => {
+    if (checks === 0) return '0 проверок';
+    if (checks === 1) return '1 проверка';
+    if (checks >= 2 && checks <= 4) return `${checks} проверки`;
+    return `${checks} проверок`;
   };
 
   return (
@@ -58,8 +94,8 @@ export const Header = () => {
           Подписка
         </button>
         <div css={subscriptionStatusStyle}>
-          {subscriptionStatus?.has_subscription && subscriptionStatus.expired_date 
-            ? `Активна до: ${formatDate(subscriptionStatus.expired_date)}`
+          {subscriptionStatus?.has_subscription 
+            ? `Осталось: ${formatChecks(subscriptionStatus.remaining_checks || 0)}`
             : 'Нет подписки'}
         </div>
       </div>
@@ -153,6 +189,54 @@ export const Header = () => {
               </div>
             </div>
 
+          </div>
+        </Modal>
+      )}
+
+      {/* Модальное окно оплаты */}
+      {isPaymentModalOpen && currentPayment && (
+        <Modal
+          onClose={handlePaymentCancel}
+          title="Оплата подписки"
+        >
+          <div css={paymentModalStyle}>
+            <div css={paymentInfoStyle}>
+              <h3 css={paymentTitleStyle}>{currentPayment.description}</h3>
+              <div css={paymentAmountStyle}>
+                Сумма: {currentPayment.amount.value} {currentPayment.amount.currency}
+              </div>
+              <div css={paymentInstructionsStyle}>
+                {/* В реальном приложении здесь была бы интеграция с ЮКассой */}
+                <p>Для завершения оплаты перейдите по ссылке:</p>
+                <a 
+                  href={currentPayment.confirmation_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  css={paymentLinkStyle}
+                >
+                  {currentPayment.confirmation_url}
+                </a>
+                <p css={paymentNoteStyle}>
+                  После успешной оплаты нажмите кнопку "Подтвердить оплату"
+                </p>
+              </div>
+            </div>
+            
+            <div css={paymentButtonsStyle}>
+              <button 
+                css={confirmButtonStyle}
+                onClick={handlePaymentConfirm}
+                disabled={isCreatingSubscription}
+              >
+                {isCreatingSubscription ? 'Активация...' : 'Подтвердить оплату'}
+              </button>
+              <button 
+                css={cancelButtonStyle}
+                onClick={handlePaymentCancel}
+              >
+                Отмена
+              </button>
+            </div>
           </div>
         </Modal>
       )}
@@ -311,6 +395,94 @@ const selectPlanButtonStyle = css`
   
   &:hover {
     background-color: #218838;
+  }
+`;
+
+// Стили для модального окна оплаты
+const paymentModalStyle = css`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+const paymentInfoStyle = css`
+  text-align: center;
+`;
+
+const paymentTitleStyle = css`
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+`;
+
+const paymentAmountStyle = css`
+  font-size: 16px;
+  font-weight: 600;
+  color: #007bff;
+  margin-bottom: 15px;
+`;
+
+const paymentInstructionsStyle = css`
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+`;
+
+const paymentLinkStyle = css`
+  color: #007bff;
+  text-decoration: none;
+  word-break: break-all;
+  display: block;
+  margin: 10px 0;
+  padding: 8px;
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  
+  &:hover {
+    text-decoration: underline;
+    background-color: #f8f9fa;
+  }
+`;
+
+const paymentNoteStyle = css`
+  font-size: 14px;
+  color: #6c757d;
+  margin: 10px 0 0 0;
+`;
+
+const paymentButtonsStyle = css`
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+`;
+
+const confirmButtonStyle = css`
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  
+  &:hover {
+    background-color: #218838;
+  }
+`;
+
+const cancelButtonStyle = css`
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: #5a6268;
   }
 `;
 

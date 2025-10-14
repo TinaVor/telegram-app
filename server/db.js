@@ -38,6 +38,17 @@ db.run(`CREATE TABLE IF NOT EXISTS ozon_orders (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 )`);
 
+// Create payments table if it doesn't exist
+db.run(`CREATE TABLE IF NOT EXISTS payments (
+  id TEXT PRIMARY KEY,
+  user_id INTEGER,
+  amount INTEGER,
+  plan_type TEXT,
+  status TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+)`);
+
 // Create subscriptions table if it doesn't exist
 db.run(
   `CREATE TABLE IF NOT EXISTS subscriptions (
@@ -45,6 +56,7 @@ db.run(
   user_id INTEGER,
   status TEXT,
   expired_date TEXT,
+  remaining_checks INTEGER DEFAULT 0,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 )`,
   (err) => {

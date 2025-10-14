@@ -23,17 +23,15 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 
     const subscription = subscriptions[0];
-    const now = new Date();
-    const expiredDate = new Date(subscription.expired_date);
 
-    // Проверяем, активна ли подписка
-    const isActive = expiredDate > now;
+    // Проверяем, активна ли подписка (есть ли остатки проверок)
+    const isActive = subscription.remaining_checks > 0;
 
     res.json({
       subscription: {
         ...subscription,
         is_active: isActive,
-        days_remaining: Math.ceil((expiredDate - now) / (1000 * 60 * 60 * 24))
+        remaining_checks: subscription.remaining_checks
       }
     });
   } catch (error) {
@@ -45,26 +43,20 @@ router.get('/', authMiddleware, async (req, res) => {
 // Создать или обновить подписку
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { plan_type } = req.body; // 'basic' (1 месяц) или 'premium' (3 месяца)
+    const { plan_type } = req.body; // 'basic' (10 проверок) или 'premium' (30 проверок)
     const userId = req.user.id;
 
     if (!plan_type || !['basic', 'premium'].includes(plan_type)) {
       return res.status(400).json({ message: 'Неверный тип подписки' });
     }
 
-    // Рассчитываем дату истечения подписки
-    const now = new Date();
-    const expiredDate = new Date();
-    
+    // Рассчитываем количество проверок
+    let remainingChecks = 0;
     if (plan_type === 'basic') {
-      // 1 месяц = 30 дней
-      expiredDate.setDate(now.getDate() + 30);
+      remainingChecks = 10; // 10 проверок
     } else if (plan_type === 'premium') {
-      // 3 месяца = 120 дней (примерно 4 месяца)
-      expiredDate.setDate(now.getDate() + 120);
+      remainingChecks = 30; // 30 проверок
     }
-
-    const expiredDateStr = expiredDate.toISOString();
 
     // Проверяем, есть ли уже подписка у пользователя
     const existingSubscriptions = await dbAllAsync(
@@ -73,18 +65,20 @@ router.post('/', authMiddleware, async (req, res) => {
     );
 
     if (existingSubscriptions.length > 0) {
-      // Обновляем существующую подписку
+      // Обновляем существующую подписку - добавляем проверки
       const subscription = existingSubscriptions[0];
+      const newRemainingChecks = subscription.remaining_checks + remainingChecks;
+      
       await dbRunAsync(
-        'UPDATE subscriptions SET expired_date = ?, status = ? WHERE id = ?',
-        [expiredDateStr, 'active', subscription.id]
+        'UPDATE subscriptions SET remaining_checks = ?, status = ? WHERE id = ?',
+        [newRemainingChecks, 'active', subscription.id]
       );
 
       res.json({
         message: 'Подписка успешно обновлена',
         subscription: {
           id: subscription.id,
-          expired_date: expiredDateStr,
+          remaining_checks: newRemainingChecks,
           status: 'active',
           plan_type: plan_type
         }
@@ -93,15 +87,15 @@ router.post('/', authMiddleware, async (req, res) => {
       // Создаем новую подписку
       const subscriptionId = randomUUID();
       await dbRunAsync(
-        'INSERT INTO subscriptions (id, user_id, status, expired_date) VALUES (?, ?, ?, ?)',
-        [subscriptionId, userId, 'active', expiredDateStr]
+        'INSERT INTO subscriptions (id, user_id, status, remaining_checks) VALUES (?, ?, ?, ?)',
+        [subscriptionId, userId, 'active', remainingChecks]
       );
 
       res.json({
         message: 'Подписка успешно создана',
         subscription: {
           id: subscriptionId,
-          expired_date: expiredDateStr,
+          remaining_checks: remainingChecks,
           status: 'active',
           plan_type: plan_type
         }
@@ -127,24 +121,65 @@ router.get('/status', authMiddleware, async (req, res) => {
       return res.json({ 
         has_subscription: false,
         is_active: false,
+        remaining_checks: 0,
         message: 'Подписка не найдена'
       });
     }
 
     const subscription = subscriptions[0];
-    const now = new Date();
-    const expiredDate = new Date(subscription.expired_date);
-    const isActive = expiredDate > now;
+    const isActive = subscription.remaining_checks > 0;
 
     res.json({
       has_subscription: true,
       is_active: isActive,
-      expired_date: subscription.expired_date,
-      days_remaining: isActive ? Math.ceil((expiredDate - now) / (1000 * 60 * 60 * 24)) : 0
+      remaining_checks: subscription.remaining_checks
     });
   } catch (error) {
     console.error('Error checking subscription status:', error);
     res.status(500).json({ message: 'Ошибка при проверке статуса подписки' });
+  }
+});
+
+// Использовать одну проверку
+router.post('/use-check', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const subscriptions = await dbAllAsync(
+      'SELECT * FROM subscriptions WHERE user_id = ?',
+      [userId]
+    );
+
+    if (subscriptions.length === 0) {
+      return res.status(400).json({ 
+        message: 'Подписка не найдена',
+        has_subscription: false
+      });
+    }
+
+    const subscription = subscriptions[0];
+
+    if (subscription.remaining_checks <= 0) {
+      return res.status(400).json({ 
+        message: 'Недостаточно проверок',
+        remaining_checks: 0
+      });
+    }
+
+    // Используем одну проверку
+    const newRemainingChecks = subscription.remaining_checks - 1;
+    await dbRunAsync(
+      'UPDATE subscriptions SET remaining_checks = ? WHERE id = ?',
+      [newRemainingChecks, subscription.id]
+    );
+
+    res.json({
+      message: 'Проверка использована',
+      remaining_checks: newRemainingChecks
+    });
+  } catch (error) {
+    console.error('Error using subscription check:', error);
+    res.status(500).json({ message: 'Ошибка при использовании проверки' });
   }
 });
 
