@@ -40,13 +40,24 @@ db.run(`CREATE TABLE IF NOT EXISTS ozon_orders (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 )`);
 
+// Create payments table if it doesn't exist
+db.run(`CREATE TABLE IF NOT EXISTS payments (
+  id TEXT PRIMARY KEY,
+  user_id INTEGER,
+  amount INTEGER,
+  plan_type TEXT,
+  status TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+)`);
+
 // Create subscriptions table if it doesn't exist
 db.run(
   `CREATE TABLE IF NOT EXISTS subscriptions (
   id TEXT PRIMARY KEY,
   user_id INTEGER,
   status TEXT,
-  expired_date TEXT,
+  remaining_slots INTEGER DEFAULT 0,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 )`,
   (err) => {
@@ -62,7 +73,7 @@ db.run(
         return;
       }
       if (row.count === 0) {
-        // Populate subscriptions for existing users
+        // Populate subscriptions for existing users with 0 slots
         db.all(`SELECT id FROM users`, (err, rows) => {
           if (err) {
             console.error('Error fetching users:', err);
@@ -70,13 +81,10 @@ db.run(
           }
           const { randomUUID } = require('crypto');
           rows.forEach((user) => {
-            const expired = new Date();
-            expired.setMonth(expired.getMonth() + 1);
-            const expiredStr = expired.toISOString();
             const subscription_id = randomUUID();
             db.run(
-              `INSERT INTO subscriptions (id, user_id, status, expired_date) VALUES (?, ?, 'active', ?)`,
-              [subscription_id, user.id, expiredStr],
+              `INSERT INTO subscriptions (id, user_id, status, remaining_slots) VALUES (?, ?, 'inactive', ?)`,
+              [subscription_id, user.id, 0],
               function (err) {
                 if (err) {
                   console.error(

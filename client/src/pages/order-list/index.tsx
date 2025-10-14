@@ -1,5 +1,5 @@
 import { css } from '@emotion/react';
-import { orderController } from '../../api';
+import { orderController, subscriptionController, paymentController } from '../../api';
 import { Order } from '../../api/order-controller/types';
 import React, { useState } from 'react';
 import { Modal } from '../../components/modal';
@@ -32,6 +32,61 @@ const checkSlotOverlap = (slots: Array<{ dateFrom: Date | null; dateTo: Date | n
 
 export const OrderListPage = () => {
   const { data, isLoading, error } = orderController.useGetUserOrders();
+  const [isSubscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
+
+  // Подписка и платежи
+  const { mutate: createPayment, isPending: isCreatingPayment } = paymentController.useCreatePayment();
+  const { data: subscriptionStatus } = subscriptionController.useGetSubscriptionStatus();
+  
+  // Состояние для модального окна оплаты
+  const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [currentPayment, setCurrentPayment] = useState<{ id: string; confirmation_url: string; amount: { value: string; currency: string }; description: string } | null>(null);
+
+  const handleSubscribe = (planType: 'basic' | 'premium') => {
+    createPayment(
+      { plan_type: planType },
+      {
+        onSuccess: (data) => {
+          console.log('Payment created:', data);
+          setCurrentPayment({
+            id: data.payment.id,
+            confirmation_url: data.payment.confirmation.confirmation_url,
+            amount: data.payment.amount,
+            description: data.payment.description
+          });
+          setPaymentModalOpen(true);
+          setSubscriptionModalOpen(false);
+        },
+        onError: (error) => {
+          alert('Ошибка при создании платежа. Пожалуйста, попробуйте еще раз.');
+          console.error('Payment creation error:', error);
+        }
+      }
+    );
+  };
+
+  const handlePaymentConfirm = () => {
+    if (!currentPayment) return;
+    
+    // В реальном приложении здесь был бы вызов API для подтверждения платежа
+    // Для демонстрации имитируем успешную оплату и создаем подписку
+    alert('Платеж успешно обработан! Подписка активирована.');
+    setPaymentModalOpen(false);
+    setCurrentPayment(null);
+  };
+
+  const handlePaymentCancel = () => {
+    setPaymentModalOpen(false);
+    setCurrentPayment(null);
+  };
+
+  // Форматирование количества слотов для отображения
+  const formatSlots = (slots: number) => {
+    if (slots === 0) return '0 слотов';
+    if (slots === 1) return '1 слот';
+    if (slots >= 2 && slots <= 4) return `${slots} слота`;
+    return `${slots} слотов`;
+  };
 
   if (isLoading) return 'Загрузка...';
 
@@ -39,11 +94,123 @@ export const OrderListPage = () => {
 
   return (
     <div css={containerStyles}>
+      {/* Кнопка подписки */}
+      <div css={subscriptionButtonContainerStyle}>
+        <button 
+          onClick={() => setSubscriptionModalOpen(true)} 
+          css={mainSubscriptionButtonStyle}
+        >
+          Купить подписку
+        </button>
+        <div css={subscriptionStatusTextStyle}>
+          {subscriptionStatus?.has_subscription 
+            ? `Осталось: ${formatSlots(subscriptionStatus.remaining_slots || 0)}`
+            : 'Нет подписки'}
+        </div>
+      </div>
+
       <div css={scrollableContainerStyles}>
         {data?.map((order) => (
           <OrderRow key={order.id} {...order} />
         ))}
       </div>
+
+      {/* Модальное окно подписки */}
+      {isSubscriptionModalOpen && (
+        <Modal
+          onClose={() => setSubscriptionModalOpen(false)}
+          title="Оформление подписки"
+        >
+          <div css={subscriptionFormStyle}>
+            <div css={planSectionStyle}>
+              <h3 css={sectionTitleStyle}>Выберите тариф</h3>
+              <div css={plansContainerStyle}>
+                <div css={planCardStyle}>
+                  <h4 css={planTitleStyle}>30 слотов</h4>
+                  <div css={planPriceStyle}>300 ₽</div>
+                  <ul css={planFeaturesStyle}>
+                    <li>30 слотов для заказов</li>
+                    <li>Базовая аналитика</li>
+                    <li>Email поддержка</li>
+                  </ul>
+                  <button 
+                    css={selectPlanButtonStyle}
+                    onClick={() => handleSubscribe('basic')}
+                    disabled={isCreatingPayment}
+                  >
+                    {isCreatingPayment ? 'Создание...' : 'Оплатить'}
+                  </button>
+                </div>
+                
+                <div css={planCardStyle}>
+                  <h4 css={planTitleStyle}>90 слотов</h4>
+                  <div css={planPriceStyle}>800 ₽</div>
+                  <ul css={planFeaturesStyle}>
+                    <li>90 слотов для заказов</li>
+                    <li>Расширенная аналитика</li>
+                    <li>Приоритетная поддержка</li>
+                    <li>Автоматизация отчетов</li>
+                  </ul>
+                  <button 
+                    css={selectPlanButtonStyle}
+                    onClick={() => handleSubscribe('premium')}
+                    disabled={isCreatingPayment}
+                  >
+                    {isCreatingPayment ? 'Создание...' : 'Оплатить'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Модальное окно оплаты */}
+      {isPaymentModalOpen && currentPayment && (
+        <Modal
+          onClose={handlePaymentCancel}
+          title="Оплата подписки"
+        >
+          <div css={paymentModalStyle}>
+            <div css={paymentInfoStyle}>
+              <h3 css={paymentTitleStyle}>{currentPayment.description}</h3>
+              <div css={paymentAmountStyle}>
+                Сумма: {currentPayment.amount.value} {currentPayment.amount.currency}
+              </div>
+              <div css={paymentInstructionsStyle}>
+                {/* В реальном приложении здесь была бы интеграция с ЮКассой */}
+                <p>Для завершения оплаты перейдите по ссылке:</p>
+                <a 
+                  href={currentPayment.confirmation_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  css={paymentLinkStyle}
+                >
+                  {currentPayment.confirmation_url}
+                </a>
+                <p css={paymentNoteStyle}>
+                  После успешной оплаты нажмите кнопку "Подтвердить оплату"
+                </p>
+              </div>
+            </div>
+            
+            <div css={paymentButtonsStyle}>
+              <button 
+                css={confirmButtonStyle}
+                onClick={handlePaymentConfirm}
+              >
+                Подтвердить оплату
+              </button>
+              <button 
+                css={cancelButtonStyle}
+                onClick={handlePaymentCancel}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
@@ -369,4 +536,208 @@ const redBorderStyles = css`
   border: 2px solid red;
   border-radius: 8px;
   padding: 10px;
+`;
+
+// Стили для компонента подписки
+const subscriptionButtonContainerStyle = css`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #444;
+  border-radius: 8px;
+`;
+
+const mainSubscriptionButtonStyle = css`
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  
+  &:hover {
+    background-color: #0056b3;
+  }
+`;
+
+const subscriptionStatusTextStyle = css`
+  font-size: 14px;
+  color: #ccc;
+  font-weight: 500;
+`;
+
+const subscriptionFormStyle = css`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+const planSectionStyle = css`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+`;
+
+const sectionTitleStyle = css`
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+`;
+
+const plansContainerStyle = css`
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+  }
+`;
+
+const planCardStyle = css`
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  flex: 1;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  
+  @media (max-width: 480px) {
+    min-width: auto;
+  }
+`;
+
+const planTitleStyle = css`
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+`;
+
+const planPriceStyle = css`
+  font-size: 18px;
+  font-weight: 700;
+  color: #007bff;
+  text-align: center;
+`;
+
+const planFeaturesStyle = css`
+  margin: 0;
+  padding-left: 15px;
+  font-size: 14px;
+  color: #666;
+  flex-grow: 1;
+  
+  li {
+    margin-bottom: 5px;
+  }
+`;
+
+const selectPlanButtonStyle = css`
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: #218838;
+  }
+`;
+
+// Стили для модального окна оплаты
+const paymentModalStyle = css`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+const paymentInfoStyle = css`
+  text-align: center;
+`;
+
+const paymentTitleStyle = css`
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+`;
+
+const paymentAmountStyle = css`
+  font-size: 16px;
+  font-weight: 600;
+  color: #007bff;
+  margin-bottom: 15px;
+`;
+
+const paymentInstructionsStyle = css`
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+`;
+
+const paymentLinkStyle = css`
+  color: #007bff;
+  text-decoration: none;
+  word-break: break-all;
+  display: block;
+  margin: 10px 0;
+  padding: 8px;
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  
+  &:hover {
+    text-decoration: underline;
+    background-color: #f8f9fa;
+  }
+`;
+
+const paymentNoteStyle = css`
+  font-size: 14px;
+  color: #6c757d;
+  margin: 10px 0 0 0;
+`;
+
+const paymentButtonsStyle = css`
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+`;
+
+const confirmButtonStyle = css`
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  
+  &:hover {
+    background-color: #218838;
+  }
+`;
+
+const cancelButtonStyle = css`
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: #5a6268;
+  }
 `;
