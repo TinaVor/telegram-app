@@ -17,116 +17,25 @@ export const Header = () => {
   const [clientId, setClientId] = useState('');
   const [apiKey, setApiKey] = useState('');
 
-  // Состояние для подписки
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [errors, setErrors] = useState<{cardNumber?: string; cardExpiry?: string; cardCvv?: string}>({});
-
   // Подписка
   const { mutate: createSubscription, isPending: isCreatingSubscription } = subscriptionController.useCreateSubscription();
   const { data: subscriptionStatus } = subscriptionController.useGetSubscriptionStatus();
 
-  const validateForm = () => {
-    const newErrors: {cardNumber?: string; cardExpiry?: string; cardCvv?: string} = {};
-    
-    if (!cardNumber.trim() || cardNumber.replace(/\s/g, '').length !== 16) {
-      newErrors.cardNumber = 'Введите корректный номер карты (16 цифр)';
-    }
-    
-    if (!cardExpiry.trim() || !/^\d{2}\/\d{2}$/.test(cardExpiry)) {
-      newErrors.cardExpiry = 'Введите срок действия в формате ММ/ГГ';
-    }
-    
-    if (!cardCvv.trim() || cardCvv.length !== 3) {
-      newErrors.cardCvv = 'Введите корректный CVV (3 цифры)';
-    }
-    
-    if (!selectedPlan) {
-      alert('Пожалуйста, выберите тарифный план');
-      return false;
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handlePayment = async () => {
-    if (!validateForm()) return;
-    
-    setIsProcessing(true);
-    
-    try {
-      // Интеграция с платежной системой (имитация)
-      console.log('Обработка платежа:', {
-        plan: selectedPlan,
-        cardNumber: cardNumber.replace(/\s/g, ''),
-        cardExpiry,
-        cardCvv
-      });
-      
-      // Имитация обработки платежа
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // После успешной оплаты создаем подписку на сервере
-      if (selectedPlan) {
-        createSubscription(
-          { plan_type: selectedPlan as 'basic' | 'premium' },
-          {
-            onSuccess: (data) => {
-              alert('Платеж успешно обработан! Подписка активирована.');
-              console.log('Subscription created:', data);
-              setSubscriptionModalOpen(false);
-              resetSubscriptionForm();
-            },
-            onError: (error) => {
-              alert('Ошибка при активации подписки. Пожалуйста, обратитесь в поддержку.');
-              console.error('Subscription creation error:', error);
-            }
-          }
-        );
+  const handleSubscribe = (planType: 'basic' | 'premium') => {
+    createSubscription(
+      { plan_type: planType },
+      {
+        onSuccess: (data) => {
+          alert('Подписка успешно активирована!');
+          console.log('Subscription created:', data);
+          setSubscriptionModalOpen(false);
+        },
+        onError: (error) => {
+          alert('Ошибка при активации подписки. Пожалуйста, попробуйте еще раз.');
+          console.error('Subscription creation error:', error);
+        }
       }
-    } catch (error) {
-      alert('Ошибка при обработке платежа. Пожалуйста, попробуйте еще раз.');
-      console.error('Payment error:', error);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const resetSubscriptionForm = () => {
-    setSelectedPlan(null);
-    setCardNumber('');
-    setCardExpiry('');
-    setCardCvv('');
-    setErrors({});
-  };
-
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length > 16) value = value.slice(0, 16);
-    
-    // Форматирование номера карты: XXXX XXXX XXXX XXXX
-    const formatted = value.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
-    setCardNumber(formatted);
-  };
-
-  const handleCardExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length > 4) value = value.slice(0, 4);
-    
-    // Форматирование срока: MM/YY
-    if (value.length >= 2) {
-      value = value.slice(0, 2) + '/' + value.slice(2);
-    }
-    setCardExpiry(value);
-  };
-
-  const handleCardCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 3);
-    setCardCvv(value);
+    );
   };
 
   // Форматирование даты для отображения
@@ -216,13 +125,11 @@ export const Header = () => {
                     <li>Email поддержка</li>
                   </ul>
                   <button 
-                    css={[
-                      selectPlanButtonStyle,
-                      selectedPlan === 'basic' && selectedPlanButtonStyle
-                    ]}
-                    onClick={() => setSelectedPlan('basic')}
+                    css={selectPlanButtonStyle}
+                    onClick={() => handleSubscribe('basic')}
+                    disabled={isCreatingSubscription}
                   >
-                    {selectedPlan === 'basic' ? 'Выбрано' : 'Выбрать'}
+                    {isCreatingSubscription ? 'Активация...' : 'Активировать'}
                   </button>
                 </div>
                 
@@ -236,62 +143,16 @@ export const Header = () => {
                     <li>Автоматизация отчетов</li>
                   </ul>
                   <button 
-                    css={[
-                      selectPlanButtonStyle,
-                      selectedPlan === 'premium' && selectedPlanButtonStyle
-                    ]}
-                    onClick={() => setSelectedPlan('premium')}
+                    css={selectPlanButtonStyle}
+                    onClick={() => handleSubscribe('premium')}
+                    disabled={isCreatingSubscription}
                   >
-                    {selectedPlan === 'premium' ? 'Выбрано' : 'Выбрать'}
+                    {isCreatingSubscription ? 'Активация...' : 'Активировать'}
                   </button>
                 </div>
               </div>
             </div>
 
-            <div css={paymentSectionStyle}>
-              <h3 css={sectionTitleStyle}>Платежные данные</h3>
-              <div css={paymentFormStyle}>
-                <input
-                  type="text"
-                  placeholder="Номер карты"
-                  value={cardNumber}
-                  onChange={handleCardNumberChange}
-                  css={[inputStyle, errors.cardNumber && inputErrorStyle]}
-                />
-                {errors.cardNumber && <div css={errorTextStyle}>{errors.cardNumber}</div>}
-                
-                <div css={cardDetailsStyle}>
-                  <div css={inputGroupStyle}>
-                    <input
-                      type="text"
-                      placeholder="ММ/ГГ"
-                      value={cardExpiry}
-                      onChange={handleCardExpiryChange}
-                      css={[smallInputStyle, errors.cardExpiry && inputErrorStyle]}
-                    />
-                    {errors.cardExpiry && <div css={errorTextStyle}>{errors.cardExpiry}</div>}
-                  </div>
-                  <div css={inputGroupStyle}>
-                    <input
-                      type="text"
-                      placeholder="CVV"
-                      value={cardCvv}
-                      onChange={handleCardCvvChange}
-                      css={[smallInputStyle, errors.cardCvv && inputErrorStyle]}
-                    />
-                    {errors.cardCvv && <div css={errorTextStyle}>{errors.cardCvv}</div>}
-                  </div>
-                </div>
-                
-                <button 
-                  css={payButtonStyle}
-                  onClick={handlePayment}
-                  disabled={isProcessing || isCreatingSubscription}
-                >
-                  {isProcessing || isCreatingSubscription ? 'Обработка...' : 'Оплатить'}
-                </button>
-              </div>
-            </div>
           </div>
         </Modal>
       )}
@@ -500,18 +361,6 @@ const payButtonStyle = css`
   }
 `;
 
-const selectedPlanButtonStyle = css`
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  
-  &:hover {
-    background-color: #0056b3;
-  }
-`;
 
 const inputErrorStyle = css`
   border-color: #dc3545 !important;
