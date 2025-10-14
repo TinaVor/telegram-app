@@ -2,14 +2,32 @@ const express = require('express');
 const { randomUUID } = require('crypto');
 const { db, dbAllAsync, dbRunAsync } = require('../../db');
 const { authenticateToken } = require('../../middleware/auth');
-const { YandexCheckout } = require('yookassa');
+const axios = require('axios');
 const router = express.Router();
 
-// Инициализация ЮКассы
-const yookassa = new YandexCheckout({
-  shopId: process.env.YOOKASSA_SHOP_ID,
-  secretKey: process.env.YOOKASSA_SECRET_KEY
-});
+// Базовый URL для API ЮКассы
+const YOOKASSA_API_URL = 'https://api.yookassa.ru/v3';
+
+// Функция для создания HTTP клиента с аутентификацией
+const createYookassaClient = () => {
+  const shopId = process.env.YOOKASSA_SHOP_ID;
+  const secretKey = process.env.YOOKASSA_SECRET_KEY;
+  
+  if (!shopId || !secretKey) {
+    throw new Error('YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY are required');
+  }
+
+  return axios.create({
+    baseURL: YOOKASSA_API_URL,
+    auth: {
+      username: shopId,
+      password: secretKey
+    },
+    headers: {
+      'Idempotence-Key': randomUUID()
+    }
+  });
+};
 
 // Создать платеж в ЮКассе
 router.post('/create', authenticateToken, async (req, res) => {
@@ -31,8 +49,9 @@ router.post('/create', authenticateToken, async (req, res) => {
       [paymentId, userId, paymentAmount, plan_type, 'pending']
     );
 
-    // Создаем платеж в ЮКассе
-    const payment = await yookassa.createPayment({
+    // Создаем платеж в ЮКассе через API
+    const yookassaClient = createYookassaClient();
+    const paymentData = {
       amount: {
         value: (paymentAmount / 100).toFixed(2),
         currency: 'RUB'
@@ -42,7 +61,7 @@ router.post('/create', authenticateToken, async (req, res) => {
       },
       confirmation: {
         type: 'redirect',
-        return_url: `${process.env.YOOKASSA_WEBHOOK_URL}/payment-success`
+        return_url: `${process.env.YOOKASSA_WEBHOOK_URL || 'http://localhost:3001'}/payment-success`
       },
       description: plan_type === 'basic' ? '30 слотов' : '90 слотов',
       metadata: {
@@ -50,7 +69,10 @@ router.post('/create', authenticateToken, async (req, res) => {
         user_id: userId,
         plan_type: plan_type
       }
-    }, paymentId);
+    };
+
+    const response = await yookassaClient.post('/payments', paymentData);
+    const payment = response.data;
 
     // Обновляем ID платежа в базе на ID из ЮКассы
     await dbRunAsync(
