@@ -1,12 +1,12 @@
 const express = require('express');
 const { randomUUID } = require('crypto');
 const { db, dbAllAsync, dbRunAsync } = require('../../db');
-const authMiddleware = require('../../middleware/auth');
+const { authenticateToken } = require('../../middleware/auth');
 
 const router = express.Router();
 
 // Получить подписку текущего пользователя
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -41,7 +41,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // Создать или обновить подписку
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { plan_type } = req.body; // 'basic' (30 слотов) или 'premium' (90 слотов)
     const userId = req.user.id;
@@ -108,7 +108,7 @@ router.post('/', authMiddleware, async (req, res) => {
 });
 
 // Проверить статус подписки
-router.get('/status', authMiddleware, async (req, res) => {
+router.get('/status', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -141,7 +141,7 @@ router.get('/status', authMiddleware, async (req, res) => {
 });
 
 // Использовать один слот
-router.post('/use-slot', authMiddleware, async (req, res) => {
+router.post('/use-slot', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
 

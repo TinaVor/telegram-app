@@ -1,12 +1,12 @@
 const express = require('express');
 const { randomUUID } = require('crypto');
 const { db, dbAllAsync, dbRunAsync } = require('../../db');
-const authMiddleware = require('../../middleware/auth');
+const { authenticateToken } = require('../../middleware/auth');
 
 const router = express.Router();
 
 // Создать платеж в ЮКассе
-router.post('/create', authMiddleware, async (req, res) => {
+router.post('/create', authenticateToken, async (req, res) => {
   try {
     const { plan_type, amount } = req.body;
     const userId = req.user.id;
@@ -52,7 +52,7 @@ router.post('/create', authMiddleware, async (req, res) => {
 });
 
 // Получить статус платежа
-router.get('/:paymentId/status', authMiddleware, async (req, res) => {
+router.get('/:paymentId/status', authenticateToken, async (req, res) => {
   try {
     const { paymentId } = req.params;
     const userId = req.user.id;
@@ -82,7 +82,7 @@ router.get('/:paymentId/status', authMiddleware, async (req, res) => {
 });
 
 // Подтвердить платеж (имитация вебхука от ЮКассы)
-router.post('/:paymentId/confirm', authMiddleware, async (req, res) => {
+router.post('/:paymentId/confirm', authenticateToken, async (req, res) => {
   try {
     const { paymentId } = req.params;
     const userId = req.user.id;
